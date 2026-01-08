@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useSession } from 'next-auth/react';
@@ -21,6 +21,57 @@ interface Message {
 interface MessageBubbleProps {
     message: Message;
 }
+
+const TIP_TITLES = [
+    "Security Tip",
+    "Byte Guard",
+    "Cyber Defense",
+    "Shield Up",
+    "Safety Protocol",
+    "Byte Insight",
+    "Cyber Wisdom",
+    "Defense Tactic"
+];
+
+const BlockquoteRenderer = ({ children, ...props }: any) => {
+    const [title, setTitle] = useState("Security Tip");
+    const [isOpen, setIsOpen] = useState(false);
+
+    useEffect(() => {
+        setTitle(TIP_TITLES[Math.floor(Math.random() * TIP_TITLES.length)]);
+    }, []);
+
+    return (
+        <div
+            className="my-6 bg-amber-50 dark:bg-amber-900/10 border-l-4 border-amber-500 dark:border-amber-600 rounded-r-sm shadow-md relative overflow-hidden transition-all duration-300 hover:bg-amber-100/50 dark:hover:bg-amber-900/20 cursor-pointer group"
+            onClick={() => setIsOpen(!isOpen)}
+        >
+            <div className={`absolute top-0 right-0 w-24 h-24 bg-amber-100 dark:bg-amber-800/10 rounded-bl-full opacity-30 transition-transform duration-500 ${isOpen ? 'scale-150' : 'scale-100'}`}></div>
+
+            <div className="p-4 flex items-center gap-3 relative z-10">
+                <span className="material-symbols-outlined text-amber-600 dark:text-amber-500 text-[24px] shrink-0">shield</span>
+                <div className="flex-1 flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-700 dark:text-amber-500 uppercase tracking-widest">{title}</span>
+                    <span className={`material-symbols-outlined text-amber-600 dark:text-amber-500 text-[20px] transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                        expand_more
+                    </span>
+                </div>
+            </div>
+
+            <div
+                className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
+            >
+                <div className="overflow-hidden">
+                    <div className="px-5 pb-5 pt-0 pl-[52px]">
+                        <blockquote className="text-amber-900 dark:text-amber-200 font-semibold leading-relaxed m-0" {...props}>
+                            {children}
+                        </blockquote>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export default function MessageBubble({ message }: MessageBubbleProps) {
     const isUser = message.role === 'user';
@@ -81,7 +132,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
 
     return (
         <div className="flex gap-4 relative group animate-fade-in-up">
-            <div className="absolute left-[15px] top-[36px] bottom-6 w-[2px] bg-gradient-to-b from-pl-brand/0 via-pl-brand/50 to-pl-brand/0 animate-stream hidden group-hover:block" style={{ backgroundSize: '100% 200%' }}></div>
+            <div className="absolute left-[15px] top-[36px] bottom-6 w-[2px] bg-gradient-to-b from-pl-brand/0 via-pl-brand/50 to-pl-brand/0 animate-stream" style={{ backgroundSize: '100% 200%' }}></div>
             <div className="size-8 shrink-0 rounded-sm bg-white dark:bg-pl-panel border border-slate-200 dark:border-pl-border flex items-center justify-center mt-0.5 z-10 shadow-sm">
                 <span className="material-symbols-outlined text-[18px] text-pl-brand">smart_toy</span>
             </div>
@@ -144,20 +195,11 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
                                     )
                                 },
                                 a: ({ node, ...props }) => <a className="text-pl-brand hover:underline font-medium break-all" target="_blank" rel="noopener noreferrer" {...props} />,
-                                blockquote: ({ node, children, ...props }) => (
-                                    <div className="my-6 p-5 bg-amber-50 dark:bg-amber-900/10 border-l-4 border-amber-500 dark:border-amber-600 rounded-r-sm shadow-md relative overflow-hidden">
-                                        <div className="absolute top-0 right-0 w-24 h-24 bg-amber-100 dark:bg-amber-800/10 rounded-bl-full opacity-30"></div>
-                                        <div className="flex items-start gap-3 relative z-10">
-                                            <span className="material-symbols-outlined text-amber-600 dark:text-amber-500 text-[24px] mt-0.5 shrink-0">shield</span>
-                                            <div className="flex-1">
-                                                <div className="text-[10px] font-bold text-amber-700 dark:text-amber-500 uppercase tracking-widest mb-2">Security Tip</div>
-                                                <blockquote className="text-amber-900 dark:text-amber-200 font-semibold leading-relaxed m-0" {...props}>
-                                                    {children}
-                                                </blockquote>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ),
+                                blockquote: ({ node, children, ...props }) => {
+                                    // Use a hook-based component logic inline or extract it. 
+                                    // extracting to a defined component is safer for hooks.
+                                    return <BlockquoteRenderer {...props}>{children}</BlockquoteRenderer>;
+                                },
                                 p: ({ node, children, ...props }) => {
                                     return <p className="font-bold leading-loose mb-6" {...props}>{children}</p>;
                                 },
@@ -176,7 +218,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
                                 }
                             }}
                         >
-                            {message.content}
+                            {message.content.replace(/\]\s+\(/g, '](')}
                         </ReactMarkdown>
                     </div>
 

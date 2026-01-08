@@ -1,3 +1,4 @@
+
 # Python
 __pycache__/
 *.py[cod]
@@ -64,3 +65,9 @@ htmlcov/
 # Misc
 *.bak
 *.tmp
+
+# ML Models
+backend/mlx_models/base/weights.npz
+mlx_models/base/weights.npz
+*.npz
+*.wav

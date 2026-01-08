@@ -11,6 +11,12 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 import uvicorn
+from dotenv import load_dotenv
+
+# Load .env from parent directory (project root)
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+env_path = os.path.join(parent_dir, '.env')
+load_dotenv(env_path)
 
 def main():
     """Start the BYTE backend server"""

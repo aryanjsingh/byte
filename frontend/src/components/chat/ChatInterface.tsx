@@ -38,6 +38,10 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
     const [streamingContent, setStreamingContent] = useState("");
     const [isThinking, setIsThinking] = useState(false);
 
+    // Refs to track content inside WebSocket closure without dependencies
+    const thinkingRef = useRef("");
+    const streamingRef = useRef("");
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const wsRef = useRef<WebSocket | null>(null);
 
@@ -60,45 +64,40 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
 
             // Create WebSocket connection
             console.log("🔌 Initializing WebSocket connection");
-            console.log("   Token (first 20 chars):", token?.substring(0, 20) + "...");
-            console.log("   Endpoint: ws://localhost:8000/ws/chat");
-            
+
             const websocket = new WebSocket(`ws://localhost:8000/ws/chat?token=${token}`);
 
             websocket.onopen = () => {
                 console.log('✅ WebSocket connected successfully');
-                console.log('   Ready state:', websocket.readyState);
                 setWsConnected(true);
                 setWs(websocket);
                 wsRef.current = websocket;
             };
 
             websocket.onmessage = (event) => {
-                console.log('📨 WebSocket message received');
                 try {
                     const data = JSON.parse(event.data);
-                    console.log('   Message type:', data.type);
-                    console.log('   Data keys:', Object.keys(data));
 
                     if (data.type === 'thinking') {
-                        console.log('   💭 Thinking content length:', data.content?.length || 0);
                         setIsThinking(true);
-                        setThinkingContent(prev => prev + (data.content || ''));
+                        // Update both state (for UI) and ref (for closure)
+                        const newContent = data.content || '';
+                        setThinkingContent(prev => prev + newContent);
+                        thinkingRef.current += newContent;
+
                     } else if (data.type === 'answer') {
-                        console.log('   💬 Answer content length:', data.content?.length || 0);
-                        setStreamingContent(prev => prev + (data.content || ''));
+                        const newContent = data.content || '';
+                        setStreamingContent(prev => prev + newContent);
+                        streamingRef.current += newContent;
+
                     } else if (data.type === 'done') {
                         console.log('   ✅ Stream complete');
-                        console.log('      Thread ID:', data.thread_id);
-                        console.log('      Tool calls:', data.tool_calls);
-                        console.log('      Total thinking:', thinkingContent.length);
-                        console.log('      Total answer:', streamingContent.length);
-                        
-                        // Finalize message
+
+                        // Finalize message using REF values which are up-to-date
                         const finalMessage: Message = {
                             role: 'assistant',
-                            content: streamingContent,
-                            thinking: thinkingContent || undefined,
+                            content: streamingRef.current,
+                            thinking: thinkingRef.current || undefined,
                             mode: mode,
                             tool_calls: data.tool_calls || [],
                             isNew: true,
@@ -109,14 +108,15 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
 
                         // Update thread ID if needed
                         if (!currentThreadId && data.thread_id) {
-                            console.log('   🔗 Creating new thread:', data.thread_id);
                             setCurrentThreadId(data.thread_id);
                             window.history.pushState(null, '', `/c/${data.thread_id}`);
                         }
 
-                        // Reset streaming state
+                        // Reset streaming state AND refs
                         setThinkingContent('');
                         setStreamingContent('');
+                        thinkingRef.current = '';
+                        streamingRef.current = '';
                         setIsThinking(false);
                         setIsLoading(false);
 
@@ -135,11 +135,12 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
                         setIsLoading(false);
                         setThinkingContent('');
                         setStreamingContent('');
+                        thinkingRef.current = '';
+                        streamingRef.current = '';
                         setIsThinking(false);
                     }
                 } catch (e) {
                     console.error('❌ Failed to parse WebSocket message:', e);
-                    console.error('   Raw data:', event.data);
                 }
             };
 
@@ -213,7 +214,7 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
 
     const sendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         console.log('📤 Send message triggered');
         console.log('   Input:', input.substring(0, 50) + (input.length > 50 ? '...' : ''));
         console.log('   Is loading:', isLoading);
@@ -221,7 +222,7 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
         console.log('   WS ready state:', wsRef.current?.readyState);
         console.log('   Current thread:', currentThreadId || 'new');
         console.log('   Mode:', mode);
-        
+
         if (!input.trim() || isLoading || !wsConnected) {
             console.warn('⚠️  Cannot send message:');
             if (!input.trim()) console.warn('   - Input is empty');
@@ -240,6 +241,8 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
         setIsLoading(true);
         setThinkingContent('');
         setStreamingContent('');
+        thinkingRef.current = '';
+        streamingRef.current = '';
         console.log('🔄 Reset input and streaming state');
 
         try {
@@ -249,12 +252,12 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
                     thread_id: currentThreadId || 'new',
                     mode: mode
                 };
-                
+
                 console.log('📨 Sending to WebSocket:');
                 console.log('   Message length:', messageToSend.length);
                 console.log('   Thread ID:', currentThreadId || 'new');
                 console.log('   Mode:', mode);
-                
+
                 // Send via WebSocket
                 wsRef.current.send(JSON.stringify(payload));
                 console.log('✅ Message sent to WebSocket');

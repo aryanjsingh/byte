@@ -25,7 +25,7 @@ load_dotenv()
 # --- Configuration ---
 # Gemini 2.5 Pro Configuration with Thinking and Streaming
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-pro",
+    model="gemini-2.5-flash-lite",
     temperature=0.7,
     streaming=True,  # Enable streaming for real-time responses
     # Thinking configuration for Gemini 2.5 Pro

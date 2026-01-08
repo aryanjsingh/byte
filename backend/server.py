@@ -450,6 +450,29 @@ async def get_thread_history(
     logs = session.exec(statement).all()
     return logs
     
+@app.delete("/chat/threads/{thread_id}")
+async def delete_thread(
+    thread_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Delete a specific thread and its history"""
+    thread = session.get(ChatThread, thread_id)
+    if not thread or thread.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Thread not found")
+        
+    # Explicitly delete all logs for this thread first to avoid FK constraint errors
+    statement = select(ConversationLog).where(ConversationLog.thread_id == thread_id)
+    logs = session.exec(statement).all()
+    for log in logs:
+        session.delete(log)
+        
+    # Now delete the thread
+    session.delete(thread)
+    session.commit()
+    
+    return {"status": "success", "message": "Thread deleted"}
+    
 # --- Chat History Route ---
 @app.get("/chat/history")
 async def get_chat_history(
@@ -525,9 +548,24 @@ async def chat(
         
         result = agent_app.invoke(inputs, config=config)
         
-        # Extract response
+        # Helper to safely extract text string from message content
+        def _get_content_str(content):
+            if isinstance(content, str):
+                return content
+            elif isinstance(content, list):
+                text_parts = []
+                for part in content:
+                    if isinstance(part, dict) and "text" in part:
+                        text_parts.append(part["text"])
+                    elif hasattr(part, "text"):
+                        text_parts.append(part.text)
+                    elif isinstance(part, str):
+                        text_parts.append(part)
+                return "".join(text_parts)
+            return str(content)
+
         final_message = result["messages"][-1]
-        response_text = final_message.content
+        response_text = _get_content_str(final_message.content)
         
         # DEBUG: Print response info
         print(f"🔥 DEBUG: final_message type = {type(final_message).__name__}")
@@ -632,8 +670,25 @@ async def chat_voice(
         }
         
         result = agent_app.invoke(inputs, config=config)
+        
+        # Helper to safely extract text string from message content
+        def _get_content_str(content):
+            if isinstance(content, str):
+                return content
+            elif isinstance(content, list):
+                text_parts = []
+                for part in content:
+                    if isinstance(part, dict) and "text" in part:
+                        text_parts.append(part["text"])
+                    elif hasattr(part, "text"):
+                        text_parts.append(part.text)
+                    elif isinstance(part, str):
+                        text_parts.append(part)
+                return "".join(text_parts)
+            return str(content)
+
         final_message = result["messages"][-1]
-        response_text = final_message.content
+        response_text = _get_content_str(final_message.content)
         # Extract tools from the result messages
         tool_calls = []
         from langchain_core.messages import AIMessage

@@ -16,6 +16,7 @@ export default function Sidebar() {
     const pathname = usePathname();
     const [threads, setThreads] = useState<ChatThread[]>([]);
     const [mounted, setMounted] = useState(false);
+    const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
     useEffect(() => setMounted(true), []);
 
@@ -66,29 +67,76 @@ export default function Sidebar() {
                     <div className="text-[9px] font-bold text-pl-text-sub dark:text-zinc-500 uppercase tracking-widest mb-2 px-3 mt-1">Workspaces</div>
 
                     {threads.map((thread) => (
-                        <Link
-                            key={thread.id}
-                            href={`/c/${thread.id}`}
-                            onClick={() => {
-                                // Optional: You might want to force a refresh or state update here if needed
-                                // But Next.js router should handle it.
-                            }}
-                            className={`flex items-center gap-3 w-full px-3 py-2 rounded transition-all group ${pathname === `/c/${thread.id}`
+                        <div key={thread.id} className="relative group/item">
+                            <Link
+                                href={`/c/${thread.id}`}
+                                className={`flex items-center gap-3 w-full px-3 py-2 rounded transition-all group ${pathname === `/c/${thread.id}`
                                     ? 'bg-blue-50 dark:bg-white/5 text-pl-brand dark:text-pl-text-primary border-l-2 border-pl-brand'
                                     : 'hover:bg-slate-50 dark:hover:bg-white/5 text-pl-text-med dark:text-pl-text-secondary border-l-2 border-transparent hover:border-slate-300 dark:hover:border-white/10'
-                                }`}
-                        >
-                            <span className={`material-symbols-outlined text-[16px] transition-colors ${pathname === `/c/${thread.id}`
+                                    }`}
+                            >
+                                <span className={`material-symbols-outlined text-[16px] transition-colors ${pathname === `/c/${thread.id}`
                                     ? 'text-pl-brand dark:text-pl-text-primary'
                                     : 'group-hover:text-pl-text-dark dark:group-hover:text-pl-text-primary'
-                                }`}>chat</span>
-                            <span className={`text-xs font-semibold truncate transition-colors ${pathname === `/c/${thread.id}`
+                                    }`}>chat</span>
+                                <span className={`text-xs font-semibold truncate flex-1 transition-colors ${pathname === `/c/${thread.id}`
                                     ? 'text-pl-brand dark:text-pl-text-primary'
                                     : 'group-hover:text-pl-text-dark dark:group-hover:text-pl-text-primary'
-                                }`}>
-                                {thread.title || "New Thread"}
-                            </span>
-                        </Link>
+                                    }`}>
+                                    {thread.title || "New Thread"}
+                                </span>
+                            </Link>
+
+                            {/* Menu Button */}
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setActiveMenuId(activeMenuId === thread.id ? null : thread.id);
+                                }}
+                                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-slate-200 dark:hover:bg-white/10 text-pl-text-sub hover:text-pl-text-dark dark:hover:text-white transition-colors ${activeMenuId === thread.id ? 'opacity-100' : 'opacity-0 group-hover/item:opacity-100'}`}
+                            >
+                                <span className="material-symbols-outlined text-[16px]">more_vert</span>
+                            </button>
+
+                            {/* Dropdown Menu */}
+                            {activeMenuId === thread.id && (
+                                <>
+                                    <div
+                                        className="fixed inset-0 z-40"
+                                        onClick={() => setActiveMenuId(null)}
+                                    />
+                                    <div className="absolute right-0 top-full mt-1 w-32 bg-white dark:bg-pl-panel border border-slate-200 dark:border-pl-border rounded shadow-lg z-50 py-1">
+                                        <button
+                                            onClick={async (e) => {
+                                                e.stopPropagation();
+                                                const token = (session as any)?.accessToken;
+                                                try {
+                                                    const res = await fetch(`http://localhost:8000/chat/threads/${thread.id}`, {
+                                                        method: 'DELETE',
+                                                        headers: { Authorization: `Bearer ${token}` }
+                                                    });
+                                                    if (res.ok) {
+                                                        setThreads(prev => prev.filter(t => t.id !== thread.id));
+                                                        if (pathname === `/c/${thread.id}`) {
+                                                            // Redirect if current thread deleted (optional, handled by nextjs link mostly but better explicit)
+                                                            // For now just letting user navigate manually or state update
+                                                        }
+                                                    }
+                                                } catch (err) {
+                                                    console.error("Failed to delete thread", err);
+                                                }
+                                                setActiveMenuId(null);
+                                            }}
+                                            className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                                        >
+                                            <span className="material-symbols-outlined text-[14px]">delete</span>
+                                            Delete
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     ))}
 
                     <div className="text-[9px] font-bold text-pl-text-sub dark:text-zinc-500 uppercase tracking-widest mb-2 px-3 mt-6">System</div>
