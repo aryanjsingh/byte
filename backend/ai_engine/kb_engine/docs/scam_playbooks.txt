@@ -1,0 +1,57 @@
+METADATA
+Topic: Phishing and Scams
+Type: Playbook
+Difficulty: Beginner
+
+CONTENT
+=== UPI Fraud ===
+Description: Fraudsters request money via UPI apps like Google Pay/PhonePe while claiming to send money.
+Signs:
+- You receive a "Pay" or "Collect" request instead of a credit alert.
+- The caller says "Enter your PIN to receive money" (PIN is ONLY for sending).
+- Urgency: "Offer expires in 2 minutes".
+Immediate Actions:
+1. Do NOT enter your PIN.
+2. Decline the request.
+3. Block and report the number on the app.
+
+=== Fake KYC / Bank Freeze ===
+Description: SMS threatening "Your account will be blocked today due to incomplete KYC. Click link to update."
+Signs:
+- Link looks odd (e.g., sbi-kyc-update.com instead of onlinesbi.com).
+- Grammar/Spelling errors in SMS.
+- Received from personal mobile number instead of official sender ID (e.g., +91-9876... instead of AD-SBI).
+Immediate Actions:
+1. Do not click the link.
+2. Call your bank using the number on your debit card (NOT the number in the SMS).
+
+=== Fake Courier / FedEx Scam ===
+Description: Automated call saying "Illegal package confiscated in your name containing drugs/passports."
+Signs:
+- Call connects to a "Police Officer" over Skype/WhatsApp video.
+- "Officer" demands money/transfer for "verification" or to avoid arrest.
+- Use of fake IDs and police backdrops.
+Immediate Actions:
+1. Hang up immediately.
+2. Real police/customs never conduct investigations via Skype video calls.
+3. Report to cybercrime.gov.in (1930).
+
+=== Job Scams ===
+Description: "Part-time job: Like YouTube videos and earn ₹5000/day."
+Signs:
+- You are added to a Telegram group.
+- They pay small amounts initially (₹100-500) to build trust.
+- Then ask YOU to invest/deposit money for "Prepaid Tasks" with higher returns.
+Immediate Actions:
+1. Take the initial small money (if you want) but NEVER pay anything.
+2. Exit the group and block contacts. 
+3. Remember: Legitimate jobs never ask you to pay to work.
+
+=== Gmail / Instagram Takeover ===
+Description: "I voted for you in a contest, can you help me back?" or "Is this you in this video?"
+Signs:
+- Requires you to log in to a fake page.
+- Or asks for a screenshot of a URL sent to your SMS/Email (which is actually a Password Reset link).
+Immediate Actions:
+1. Enable 2-Factor Authentication (2FA) immediately.
+2. Do not click links from friends asking for strange favors without calling them first.

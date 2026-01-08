@@ -1,0 +1,16 @@
+CERT Resilience Management Model (CERT-RMM)
+
+1. Asset Definition and Management (ADM):
+The purpose of Asset Definition and Management is to identify, document, and manage organizational assets during their lifecycle to ensure that they support the organization's mission and sustain value.
+
+2. Access Management (AM):
+The purpose of Access Management is to ensure that access granted to assets is commensurate with their business value and the organization's risk appetite.
+
+3. Incident Management and Control (IMC):
+The purpose of Incident Management and Control is to establish processes to detect, analyze, and respond to incidents designated by the organization as requiring specific handling.
+
+4. Vulnerability Analysis and Resolution (VAR):
+The purpose of Vulnerability Analysis and Resolution is to identify, analyze, and manage vulnerabilities in organizational assets.
+
+Key Practice: Establish a strong password policy (e.g., minimum 14 characters, complexity requirements, rotation every 90 days if without MFA).
+Key Practice: Implement Multi-Factor Authentication (MFA) for all remote access and administrative accounts.

@@ -1,0 +1,18 @@
+METADATA
+Topic: Glossary
+Type: Reference
+Difficulty: Beginner
+
+CONTENT
+1. 2FA (Two-Factor Authentication): A security process in which you provide two different authentication factors to verify yourself.
+2. Botnet: A network of private computers infected with malicious software and controlled as a group without the owners' knowledge.
+3. Brute Force Attack: An attempt to crack a password or username or find a hidden web page, or find the key used to encrypt a message, using a trial and error approach and hoping, eventually, to guess correctly.
+4. DDoS (Distributed Denial of Service): An attack where multiple compromised systems, which are often infected with a Trojan, are used to target a single system causing a Denial of Service (DoS) attack.
+5. Encryption: The process of converting information or data into a code, especially to prevent unauthorized access.
+6. Firewall: A network security system that monitors and controls incoming and outgoing network traffic based on predetermined security rules.
+7. Malware: Software that is specifically designed to disrupt, damage, or gain unauthorized access to a computer system.
+8. Phishing: The fraudulent practice of sending emails purporting to be from reputable companies in order to induce individuals to reveal personal information, such as passwords and credit card numbers.
+9. Ransomware: A type of malicious software designed to block access to a computer system until a sum of money is paid.
+10. Social Engineering: The use of deception to manipulate individuals into divulging confidential or personal information that may be used for fraudulent purposes.
+11. VPN (Virtual Private Network): A connection method used to add security and privacy to private and public networks, like WiFi Hotspots and the Internet.
+12. Zero-Day Exploit: An attack that takes advantage of a security vulnerability on the same day that the vulnerability becomes generally known.

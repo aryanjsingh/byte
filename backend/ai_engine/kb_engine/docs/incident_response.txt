@@ -1,0 +1,35 @@
+METADATA
+Topic: Incident Response
+Type: Playbook
+Difficulty: Beginner
+
+CONTENT
+=== Email Account Hacked ===
+First 15 Minutes:
+1. Change Password immediately from a different device if possible.
+2. Sign out of all other sessions (Gmail: Details > Sign out all other web sessions).
+3. Check and remove any unknown Recovery Email or Phone Number.
+4. Check "Filters" and "Forwarding" settings – hackers often forward your mail to themselves.
+24 Hours:
+1. Enable 2FA / MFA.
+2. Alert your contacts (social media/WhatsApp) that your email was hacked so they ignore scams coming from you.
+3. Check services linked to that email (Bank, Social Media) for unauthorized access.
+
+=== Malware / Ransomware Infection ===
+First 15 Minutes:
+1. Disconnect from the Internet (Unplug Ethernet, Turn off Wi-Fi) immediately to prevent spread.
+2. Do NOT pay the ransom. It does not guarantee data recovery and funds future attacks.
+3. Backup critical files if possible (only if you sure they aren't infected, otherwise skip).
+24 Hours:
+1. Boot into "Safe Mode".
+2. Run a full scan using a reputable Antivirus (Malwarebytes, Bitdefender, etc.).
+3. If deep infection, consider completely wiping the drive and reinstalling the OS.
+
+=== Data Breach Suspicion ===
+Signs:
+- You receive an alert from distinct services, or find your data on HaveIBeenPwned.
+Actions:
+1. Identify exactly which password was leaked.
+2. Change that password and ANY other account where you reused it.
+3. Enable 2FA on critical accounts (Banking, Email).
+4. Monitor bank statements for unusual transactions.

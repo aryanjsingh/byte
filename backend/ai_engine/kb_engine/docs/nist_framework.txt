@@ -1,0 +1,22 @@
+NIST Cybersecurity Framework (CSF) 2.0 
+Core Functions: GOVERN, IDENTIFY, PROTECT, DETECT, RESPOND, RECOVER
+
+GOVERN (GV): The organization’s cybersecurity risk management strategy, expectations, and policy are established, communicated, and monitored.
+- GV.OC-01: Organizational mission, objectives, and high-level priorities for cybersecurity are understood.
+
+IDENTIFY (ID): The organization’s current cybersecurity risks are understood.
+- ID.AM-01: Inventories of hardware, software, services, and data are maintained.
+- ID.RA-01: Vulnerabilities in assets are identified, validated, and recorded.
+
+PROTECT (PR): Safeguards to ensure the delivery of critical infrastructure services.
+- PR.AA-01: Identities and credentials are managed.
+- PR.DS-01: Data-at-rest and data-in-transit are protected.
+
+DETECT (DE): Develop and implement appropriate activities to identify the occurrence of a cybersecurity event.
+- DE.CM-01: The network and physical environment are monitored to detect potential cybersecurity events.
+
+RESPOND (RS): Develop and implement appropriate activities to take action regarding a detected cybersecurity incident.
+- RS.MA-01: Incidents are contained and mitigated.
+
+RECOVER (RC): Develop and implement appropriate activities to maintain plans for resilience and to restore any capabilities or services that were impaired due to a cybersecurity incident.
+- RC.RP-01: Recovery plan is executed during or after an incident.

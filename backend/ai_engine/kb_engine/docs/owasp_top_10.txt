@@ -1,0 +1,55 @@
+METADATA
+Topic: OWASP Top 10
+Type: Framework
+Difficulty: Intermediate
+
+CONTENT
+1. Broken Access Control
+Description: Users can act outside of their intended permissions.
+Example: A user changes the URL from /user/get?id=123 to /user/get?id=456 and views another user's data.
+Fix: Implement proper server-side access control checks for every request.
+
+2. Cryptographic Failures
+Description: Sensitive data (passwords, health records) is stored or transmitted without proper encryption.
+Example: Storing passwords in plain text or using weak hashing algorithms like MD5.
+Fix: Use strong algorithms (Argon2, bcrypt), enforce HTTPS options (HSTS).
+
+3. Injection
+Description: Untrusted data is sent to an interpreter as part of a command or query.
+Example: SQL Injection where input ' OR 1=1 -- is used to bypass login.
+Fix: Use parameterized queries/prepared statements; validate all inputs.
+
+4. Insecure Design
+Description: Risks related to design flaws and architectural structures.
+Example: An e-commerce site designed without bot protection allows unlimited coupon code guessing.
+Fix: Integrate threat modeling into the design phase.
+
+5. Security Misconfiguration
+Description: Default configurations, incomplete setups, or open cloud storage.
+Example: An AWS S3 bucket left open to the public containing sensitive backups.
+Fix: Automate verification of configuration effectiveness; remove default accounts.
+
+6. Vulnerable and Outdated Components
+Description: Using libraries or frameworks with known vulnerabilities.
+Example: Using an old version of Log4j.
+Fix: Regularly scan dependencies (using tools like Snyk or OWASP Dependency Check) and patch.
+
+7. Identification and Authentication Failures
+Description: Weaknesses in session management or credential handling.
+Example: Allowing weak passwords like "password123" or not implementing rate limiting on login.
+Fix: Implement Multi-Factor Authentication (MFA) and strong password policies.
+
+8. Software and Data Integrity Failures
+Description: Code and infrastructure that does not protect against integrity violations.
+Example: Updates downloaded without signing verification.
+Fix: Use digital signatures to verify software updates.
+
+9. Security Logging and Monitoring Failures
+Description: Failures to log critical events or monitor for malicious activity.
+Example: Login failures are not logged, allowing an attacker to brute-force accounts unnoticed.
+Fix: Log all login, access control, and server-side input validation failures.
+
+10. Server-Side Request Forgery (SSRF)
+Description: Applications fetching a remote resource without validating the user-supplied URL.
+Example: An attacker forces the server to connect to internal services like metadata APIs.
+Fix: Validate and sanitize all user-supplied URLs; blacklist internal IP ranges.
