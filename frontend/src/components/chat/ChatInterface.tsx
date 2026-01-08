@@ -53,29 +53,47 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
     useEffect(() => {
         if (status === 'authenticated' && session?.user) {
             const token = (session as any).accessToken;
-            if (!token) return;
+            if (!token) {
+                console.error('❌ No access token available');
+                return;
+            }
 
             // Create WebSocket connection
-            console.log("DEBUG: Connecting to WS with token:", token?.substring(0, 10));
+            console.log("🔌 Initializing WebSocket connection");
+            console.log("   Token (first 20 chars):", token?.substring(0, 20) + "...");
+            console.log("   Endpoint: ws://localhost:8000/ws/chat");
+            
             const websocket = new WebSocket(`ws://localhost:8000/ws/chat?token=${token}`);
 
             websocket.onopen = () => {
-                console.log('DEBUG: WebSocket connected successfully');
+                console.log('✅ WebSocket connected successfully');
+                console.log('   Ready state:', websocket.readyState);
                 setWsConnected(true);
                 setWs(websocket);
                 wsRef.current = websocket;
             };
 
             websocket.onmessage = (event) => {
+                console.log('📨 WebSocket message received');
                 try {
                     const data = JSON.parse(event.data);
+                    console.log('   Message type:', data.type);
+                    console.log('   Data keys:', Object.keys(data));
 
                     if (data.type === 'thinking') {
+                        console.log('   💭 Thinking content length:', data.content?.length || 0);
                         setIsThinking(true);
                         setThinkingContent(prev => prev + (data.content || ''));
                     } else if (data.type === 'answer') {
+                        console.log('   💬 Answer content length:', data.content?.length || 0);
                         setStreamingContent(prev => prev + (data.content || ''));
                     } else if (data.type === 'done') {
+                        console.log('   ✅ Stream complete');
+                        console.log('      Thread ID:', data.thread_id);
+                        console.log('      Tool calls:', data.tool_calls);
+                        console.log('      Total thinking:', thinkingContent.length);
+                        console.log('      Total answer:', streamingContent.length);
+                        
                         // Finalize message
                         const finalMessage: Message = {
                             role: 'assistant',
@@ -91,6 +109,7 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
 
                         // Update thread ID if needed
                         if (!currentThreadId && data.thread_id) {
+                            console.log('   🔗 Creating new thread:', data.thread_id);
                             setCurrentThreadId(data.thread_id);
                             window.history.pushState(null, '', `/c/${data.thread_id}`);
                         }
@@ -108,7 +127,7 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
                             ));
                         }, 2000);
                     } else if (data.type === 'error') {
-                        console.error('WebSocket error:', data.error);
+                        console.error('❌ WebSocket error message:', data.error);
                         setMessages(prev => [...prev, {
                             role: 'assistant',
                             content: `Error: ${data.error}`
@@ -119,23 +138,29 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
                         setIsThinking(false);
                     }
                 } catch (e) {
-                    console.error('Failed to parse WebSocket message:', e);
+                    console.error('❌ Failed to parse WebSocket message:', e);
+                    console.error('   Raw data:', event.data);
                 }
             };
 
             websocket.onerror = (error) => {
-                console.error('DEBUG: WebSocket error observed:', error);
+                console.error('❌ WebSocket error observed:', error);
+                console.error('   Ready state:', websocket.readyState);
                 setWsConnected(false);
             };
 
             websocket.onclose = (event) => {
-                console.log(`DEBUG: WebSocket disconnected. Code: ${event.code}, Reason: ${event.reason}`);
+                console.log(`🔌 WebSocket disconnected`);
+                console.log('   Code:', event.code);
+                console.log('   Reason:', event.reason);
+                console.log('   Was clean:', event.wasClean);
                 setWsConnected(false);
                 setWs(null);
                 wsRef.current = null;
             };
 
             return () => {
+                console.log('🔌 Cleaning up WebSocket connection');
                 websocket.close();
             };
         }
@@ -188,31 +213,56 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
 
     const sendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!input.trim() || isLoading || !wsConnected) return;
+        
+        console.log('📤 Send message triggered');
+        console.log('   Input:', input.substring(0, 50) + (input.length > 50 ? '...' : ''));
+        console.log('   Is loading:', isLoading);
+        console.log('   WS connected:', wsConnected);
+        console.log('   WS ready state:', wsRef.current?.readyState);
+        console.log('   Current thread:', currentThreadId || 'new');
+        console.log('   Mode:', mode);
+        
+        if (!input.trim() || isLoading || !wsConnected) {
+            console.warn('⚠️  Cannot send message:');
+            if (!input.trim()) console.warn('   - Input is empty');
+            if (isLoading) console.warn('   - Already loading');
+            if (!wsConnected) console.warn('   - WebSocket not connected');
+            return;
+        }
 
         // Optimistically add user message
         const userMessage: Message = { role: 'user', content: input, mode: mode };
         setMessages(prev => [...prev, userMessage]);
+        console.log('✅ Added user message to UI');
 
         const messageToSend = input;
         setInput('');
         setIsLoading(true);
         setThinkingContent('');
         setStreamingContent('');
+        console.log('🔄 Reset input and streaming state');
 
         try {
             if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-                // Send via WebSocket
-                wsRef.current.send(JSON.stringify({
+                const payload = {
                     message: messageToSend,
                     thread_id: currentThreadId || 'new',
                     mode: mode
-                }));
+                };
+                
+                console.log('📨 Sending to WebSocket:');
+                console.log('   Message length:', messageToSend.length);
+                console.log('   Thread ID:', currentThreadId || 'new');
+                console.log('   Mode:', mode);
+                
+                // Send via WebSocket
+                wsRef.current.send(JSON.stringify(payload));
+                console.log('✅ Message sent to WebSocket');
             } else {
                 throw new Error('WebSocket not connected');
             }
         } catch (error) {
-            console.error(error);
+            console.error('❌ Error sending message:', error);
             setMessages(prev => [...prev, { role: 'assistant', content: "Error: Could not connect to the AI backend." }]);
             setIsLoading(false);
         }

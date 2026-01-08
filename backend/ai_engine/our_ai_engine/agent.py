@@ -23,16 +23,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Configuration ---
-# Gemini 2.5 Pro Configuration
+# Gemini 2.5 Pro Configuration with Thinking and Streaming
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-pro",
     temperature=0.7,
-    model_kwargs={
-        "thinking_config": {
-            "include_thoughts": True, 
-            "budget_tokens": 8192
-        }
-    }
+    streaming=True,  # Enable streaming for real-time responses
+    # Thinking configuration for Gemini 2.5 Pro
+    # Note: LangChain's ChatGoogleGenerativeAI may not directly support thinking config
+    # We'll handle this at the API level if needed
 )
 print("🔥 DEBUG: Agent LLM Initialized with gemini-2.5-pro")
 
@@ -170,6 +168,29 @@ def reasoner(state: AgentState):
             response = llm_with_tools.invoke(final_messages + [reminder])
         else:
             response = llm_with_tools.invoke(final_messages)
+            
+        # Extract thinking/thoughts from response if present
+        # Gemini 2.5 Pro may include thoughts in additional_kwargs or response_metadata
+        thinking_text = ""
+        if hasattr(response, 'response_metadata'):
+            metadata = response.response_metadata
+            # Check for thoughts in metadata
+            if 'thoughts' in metadata:
+                thinking_text = metadata['thoughts']
+            elif 'thinking' in metadata:
+                thinking_text = metadata['thinking']
+        
+        # Also check additional_kwargs as some versions might store it there
+        if hasattr(response, 'additional_kwargs'):
+            kwargs = response.additional_kwargs
+            if 'thoughts' in kwargs:
+                thinking_text = kwargs['thoughts']
+            elif 'thinking' in kwargs:
+                thinking_text = kwargs['thinking']
+        
+        # If we found thinking content, add it to the response
+        if thinking_text and not response.additional_kwargs.get('thoughts'):
+            response.additional_kwargs['thoughts'] = thinking_text
             
         # SAFETY: If Gemini returns empty, provide a fallback to avoid LangGraph error
         if not response.content and not response.tool_calls:
