@@ -2,39 +2,44 @@
 
 import React from 'react';
 import { signOut } from 'next-auth/react';
+import { motion } from 'framer-motion';
 
-export default function Header() {
+interface HeaderProps {
+    title?: string;
+}
+
+export default function Header({ title }: HeaderProps) {
     const handleLogout = async () => {
         await signOut({ callbackUrl: '/login' });
     };
 
     return (
-        <header className="h-14 flex items-center justify-between px-4 sm:px-6 border-b border-pl-border-light dark:border-pl-border bg-white/90 dark:bg-pl-bg/90 backdrop-blur-md sticky top-0 z-20">
-            <div className="flex items-center gap-3">
-                <button className="md:hidden p-2 -ml-2 text-pl-text-med dark:text-pl-text-secondary hover:bg-slate-100 dark:hover:bg-white/5 rounded">
-                    <span className="material-symbols-outlined">menu</span>
-                </button>
-                <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-pl-brand dark:text-pl-brand text-[20px]">hub</span>
-                    <h2 className="text-pl-text-dark dark:text-pl-text-primary text-sm font-bold tracking-tight">Quantum Computing / Session 4</h2>
-                    <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded-sm bg-blue-50 dark:bg-pl-brand/10 text-[9px] font-bold text-pl-brand border border-blue-100 dark:border-pl-brand/20 uppercase tracking-wide">
-                        Model v4
-                    </span>
+        <motion.header
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+            className="flex items-center justify-between px-4 sm:px-6 glass-subtle sticky top-0 z-20 min-h-[56px] pt-[env(safe-area-inset-top)]"
+        >
+            {/* Left Section */}
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 flex-1 max-w-[200px] sm:max-w-2xl">
+                    <span className="material-symbols-outlined text-blue-400 text-[16px] sm:text-[18px] flex-shrink-0">auto_awesome</span>
+                    <span className="text-xs sm:text-sm font-medium text-white/80 truncate">{title || "New"}</span>
                 </div>
             </div>
-            <div className="flex items-center gap-1">
-                <button className="flex items-center gap-1.5 px-2 py-1.5 text-pl-text-med dark:text-pl-text-secondary hover:text-pl-text-dark dark:hover:text-pl-text-primary hover:bg-slate-100 dark:hover:bg-white/5 rounded transition-all" title="Export">
-                    <span className="material-symbols-outlined text-[18px]">download</span>
-                </button>
-                <div className="w-px h-4 bg-slate-200 dark:bg-pl-border mx-1"></div>
-                <button
+
+            {/* Right Section */}
+            <div className="flex items-center gap-1 sm:gap-2">
+                <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={handleLogout}
-                    className="flex items-center gap-1.5 px-2 py-1.5 text-pl-text-med dark:text-pl-text-secondary hover:text-pl-text-dark dark:hover:text-pl-text-primary hover:bg-slate-100 dark:hover:bg-white/5 rounded transition-all"
-                    title="More / Logout"
+                    className="flex items-center justify-center size-9 sm:size-10 text-white/60 hover:text-white hover:bg-white/5 rounded-xl transition-all group"
+                    title="Logout"
                 >
-                    <span className="material-symbols-outlined text-[18px]">more_horiz</span>
-                </button>
+                    <span className="material-symbols-outlined text-[20px] group-hover:text-red-400 transition-colors">logout</span>
+                </motion.button>
             </div>
-        </header>
+        </motion.header>
     );
 }

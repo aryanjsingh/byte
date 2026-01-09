@@ -1,0 +1,61 @@
+## [Customization](https://ai-sdk.dev/elements/usage#customization)
+
+[Customization](https://ai-sdk.dev/elements/usage#customization)
+If you re-install AI Elements by rerunning npx ai-elements@latest, the CLI will ask before overwriting the file so you can save any custom changes you made.
+
+```
+npx ai-elements@latest
+```
+
+After installation, no additional setup is needed. The component’s styles (Tailwind CSS classes) and scripts are already integrated. You can start interacting with the component in your app immediately.
+For example, if you'd like to remove the rounding on Message, you can go to components/ai-elements/message.tsx and remove rounded-lg as follows:
+
+```
+Message
+```
+
+
+```
+components/ai-elements/message.tsx
+```
+
+
+```
+rounded-lg
+```
+
+
+```
+export const MessageContent = ({ children, className, ...props }: MessageContentProps) => ( <div className={cn( 'flex flex-col gap-2 text-sm text-foreground', 'group-[.is-user]:bg-primary group-[.is-user]:text-primary-foreground group-[.is-user]:px-4 group-[.is-user]:py-3', className, )} {...props} > <div className="is-user:dark">{children}</div> </div> );
+```
+
+
+```
+export const MessageContent = ({ children, className, ...props }: MessageContentProps) => ( <div className={cn( 'flex flex-col gap-2 text-sm text-foreground', 'group-[.is-user]:bg-primary group-[.is-user]:text-primary-foreground group-[.is-user]:px-4 group-[.is-user]:py-3', className, )} {...props} > <div className="is-user:dark">{children}</div> </div> );
+```
+
+[IntroductionWhat is AI Elements and why you should use it.](https://ai-sdk.dev/elements)
+Introduction
+What is AI Elements and why you should use it.
+[TroubleshootingWhat to do if you run into issues with AI Elements.](https://ai-sdk.dev/elements/troubleshooting)
+Troubleshooting
+What to do if you run into issues with AI Elements.
+On this page
+[Example](https://ai-sdk.dev/elements/usage#example)
+[Extensibility](https://ai-sdk.dev/elements/usage#extensibility)
+[Customization](https://ai-sdk.dev/elements/usage#customization)
+[GitHubEdit this page on GitHub](https://github.com/vercel/ai-elements/edit/main/apps/docs/content/docs/usage.mdx)
+[Vercel](https://vercel.com/)
+[AI SDK](https://ai-sdk.dev/)
+[Docs](https://ai-sdk.dev/docs)
+[Cookbook](https://ai-sdk.dev/cookbook)
+[Providers](https://ai-sdk.dev/providers)
+[Tools Registry](https://ai-sdk.dev/tools-registry)
+[Playground](https://ai-sdk.dev/playground)
+[AI ElementsAI ElementsLeft sparkleRight sparkle](https://ai-sdk.dev/elements)
+[AI GatewayGateway](https://vercel.com/ai-gateway)
+[Feedback](https://github.com/vercel/ai-elements/issues)
+[GitHub](https://github.com/vercel/ai-elements)
+[Vercel LogoSign in with Vercel](https://ai-sdk.dev/)
+AI SDK 6 is in Beta.
+[Learn more](https://ai-sdk.dev/docs/introduction/announcing-ai-sdk-6-beta)

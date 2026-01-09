@@ -1,0 +1,278 @@
+METADATA
+title: India Cybersecurity Knowledge Base
+category: awareness
+region: india
+version: 1.0
+CONTENT
+
+# CYBERSECURITY AWARENESS & THREAT EDUCATION (INDIA)
+
+Cybersecurity refers to the practice of protecting systems, networks, applications, and users from digital attacks aimed at stealing data, extorting money, or disrupting services.
+
+## Common Cyber Threats in India
+
+### Phishing
+Phishing is a fraud technique where attackers impersonate trusted entities to steal sensitive data like passwords, OTPs, or bank details.
+
+Red Flags:
+- Urgency (account blocked, action required)
+- Unknown or misspelled sender domains
+- Shortened or suspicious URLs
+- Grammar or formatting errors
+
+Examples in India:
+- Fake bank SMS requesting KYC update
+- Fake government emails (Income Tax, Aadhaar)
+- Fake delivery messages (Amazon, Flipkart)
+- Fake UPI payment requests
+
+### Malware
+Malware is malicious software designed to damage or spy on devices.
+
+Types:
+- Virus: Self-replicating malicious code
+- Trojan: Disguised as legitimate software
+- Spyware: Monitors user activity secretly
+- Ransomware: Encrypts files and demands payment
+
+Symptoms:
+- Slow system performance
+- Unknown apps appearing
+- High data usage
+- Frequent pop-ups
+- Battery draining quickly
+
+### Social Engineering
+Psychological manipulation to trick users into revealing confidential information.
+
+Common Examples in India:
+- Fake job offers on WhatsApp
+- Lottery/prize scams
+- Impersonation calls (bank officials, police)
+- Fake customer support calls
+- Romance scams on dating apps
+
+### UPI & Payment Frauds (India-Specific)
+- Fake "collect request" scams on PhonePe, GPay, Paytm
+- QR code frauds (scanning malicious QR codes)
+- Screen sharing scams (AnyDesk, TeamViewer)
+- Refund frauds (fake refund links)
+- Fake UPI apps
+
+## Cyber Hygiene Best Practices
+- Use strong and unique passwords (12+ characters)
+- Enable multi-factor authentication (2FA)
+- Never share OTPs with anyone
+- Verify links before clicking
+- Keep devices and apps updated
+- Use official app stores only
+- Avoid public WiFi for banking
+- Regularly check bank statements
+
+# PHISHING, SCAM & FRAUD DETECTION
+
+## Common Phishing Keywords
+- Urgent action required
+- Verify immediately
+- Account suspended
+- Refund pending
+- Limited time offer
+- KYC update required
+- Your account will be blocked
+
+## Domain Spoofing Indicators
+- Character substitution (l → I, o → 0)
+- Extra words (secure-bank-login.com)
+- Uncommon TLDs (.xyz, .top, .click)
+
+Examples:
+- Fake: bankoflndia.in (uses lowercase L instead of I)
+- Real: bankofindia.in
+- Fake: sbi-secure-login.com
+- Real: onlinesbi.com
+
+## Malicious URL Indicators
+- URL shorteners (bit.ly, tinyurl)
+- IP-based URLs (http://192.168.x.x)
+- Excessive query parameters
+- Misspelled brand names
+- HTTP instead of HTTPS
+
+## Dangerous Attachment Types
+- .exe (executable)
+- .js (JavaScript)
+- .zip/.rar (compressed, may hide malware)
+- .html (can contain scripts)
+- .xlsm/.docm (macro-enabled Office files)
+
+## Scam Categories in India
+- Job fraud (fake hiring, advance fees)
+- Investment scams (crypto, forex, MLM)
+- Romance scams (dating apps, social media)
+- Fake loan apps (predatory lending)
+- Government scheme scams (PM Kisan, Ayushman)
+- Tech support scams (Microsoft, antivirus)
+- Electricity bill scams (disconnection threats)
+
+# INCIDENT RESPONSE & RECOVERY
+
+## Incident Response Lifecycle (NIST-Based)
+1. Preparation: Have plans and tools ready
+2. Identification: Detect and confirm the incident
+3. Containment: Limit the damage
+4. Eradication: Remove the threat
+5. Recovery: Restore normal operations
+6. Lessons Learned: Document and improve
+
+## Incident Playbooks
+
+### Ransomware Infection
+1. Disconnect from network immediately
+2. Isolate infected system
+3. Do NOT pay the ransom
+4. Restore from clean backup
+5. Report to CERT-In
+6. Change all passwords
+
+### Account Compromise
+1. Reset password immediately
+2. Enable MFA/2FA
+3. Review login history
+4. Check for unauthorized transactions
+5. Notify bank or platform
+6. Report to cybercrime portal
+
+### Data Breach
+1. Identify exposed data
+2. Inform affected users
+3. Secure systems
+4. Legal reporting if required
+5. Monitor for misuse
+
+### UPI Fraud Recovery
+1. Report to bank within 3 days
+2. File complaint on cybercrime.gov.in
+3. Call 1930 helpline
+4. Block UPI ID if compromised
+5. Keep transaction screenshots
+
+# SECURE CODING & DEVELOPER SECURITY
+
+## Insecure Coding Practices
+
+Hardcoded credentials (NEVER DO THIS):
+password = "admin123"
+api_key = "sk-xxxxx"
+
+Use of eval() (DANGEROUS):
+eval(user_input)
+
+SQL Injection vulnerability:
+SELECT * FROM users WHERE id = '" + user_id + "'
+
+## Secure Coding Best Practices
+- Use parameterized queries for database
+- Store secrets in environment variables
+- Validate and sanitize all user input
+- Implement proper authentication & authorization
+- Log security events
+- Use HTTPS everywhere
+- Keep dependencies updated
+- Follow OWASP guidelines
+
+## OWASP Top 10 Risks (2021)
+1. Broken Access Control
+2. Cryptographic Failures
+3. Injection (SQL, XSS, etc.)
+4. Insecure Design
+5. Security Misconfiguration
+6. Vulnerable Components
+7. Authentication Failures
+8. Software Integrity Failures
+9. Logging & Monitoring Failures
+10. Server-Side Request Forgery (SSRF)
+
+# MENTAL HEALTH & DIGITAL TRAUMA SUPPORT
+
+Victims of cybercrime may experience anxiety, panic, shame, and loss of trust.
+
+Reassurance Messages:
+- You are not alone
+- Cybercrime can happen to anyone
+- It's not your fault
+- Support is available
+
+Recovery Steps:
+1. Report the incident
+2. Secure your accounts
+3. Talk to trusted people
+4. Seek professional support if needed
+5. Don't blame yourself
+
+# INDIAN CYBER LAWS & USER RIGHTS
+
+## Information Technology Act, 2000
+
+Section 43 – Unauthorized access to computer systems
+Penalty: Up to Rs. 1 crore compensation
+
+Section 66 – Computer-related offenses
+Penalty: Up to 3 years imprisonment and/or fine
+
+Section 66C – Identity theft
+Penalty: Up to 3 years imprisonment and Rs. 1 lakh fine
+
+Section 66D – Cheating by personation using computer
+Penalty: Up to 3 years imprisonment and Rs. 1 lakh fine
+
+Section 67 – Publishing obscene material
+Penalty: Up to 5 years imprisonment and Rs. 10 lakh fine
+
+## User Rights
+- Right to report cybercrime
+- Right to data privacy (under IT Rules)
+- Right to grievance redressal
+- Right to compensation for data breach
+
+# CYBERCRIME REPORTING & HELPLINES – INDIA
+
+## National Cyber Crime Portal
+Website: https://cybercrime.gov.in
+- Report all types of cybercrime
+- Track complaint status
+- Anonymous reporting available
+
+## National Cybercrime Helpline
+Phone: 1930
+- 24/7 helpline
+- Immediate assistance for financial fraud
+- Multi-language support
+
+## CERT-In (Indian Computer Emergency Response Team)
+Website: https://www.cert-in.org.in
+Email: incident@cert-in.org.in
+- Report security incidents
+- Get security advisories
+- Vulnerability disclosure
+
+## Women Safety (NCW)
+Website: https://ncw.nic.in
+Helpline: 7827-170-170
+- Report cyber harassment
+- Online stalking complaints
+- Revenge porn/morphed images
+
+## Mental Health Support
+AASRA: 91-22-27546669
+Kiran Helpline: 1800-599-0019 (toll-free)
+iCall: 9152987821
+
+## Local Police
+- Visit nearest cyber cell or police station
+- Carry all evidence (screenshots, messages)
+- File FIR for serious crimes
+
+## Bank Fraud Reporting
+- Report within 3 days for full refund eligibility
+- Contact bank's fraud helpline
+- Block cards/accounts if compromised

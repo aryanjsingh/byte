@@ -66,8 +66,23 @@ htmlcov/
 *.bak
 *.tmp
 
-# ML Models
+# ML Models & Data
 backend/mlx_models/base/weights.npz
 mlx_models/base/weights.npz
 *.npz
 *.wav
+*.onnx
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# Large Data Directories
+fake_news/data/
+fake_news/output/
+fake_test/
+backend/ai_engine/kb_engine/voice_engine/models/
+backend/ai_engine/kb_engine/db/
+*.csv
+*.tsv
+*.bin

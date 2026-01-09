@@ -1,0 +1,76 @@
+### [Server](https://ai-sdk.dev/elements/examples/chatbot#server)
+
+[Server](https://ai-sdk.dev/elements/examples/chatbot#server)
+Create a new route handler app/api/chat/route.ts and paste in the following code. We're using perplexity/sonar for web search because by default the model returns search results. We also pass sendSources and sendReasoning to toUIMessageStreamResponse in order to receive as parts on the frontend. The handler now also accepts file attachments from the client.
+
+```
+app/api/chat/route.ts
+```
+
+
+```
+perplexity/sonar
+```
+
+
+```
+sendSources
+```
+
+
+```
+sendReasoning
+```
+
+
+```
+toUIMessageStreamResponse
+```
+
+
+```
+import { streamText, UIMessage, convertToModelMessages } from 'ai'; // Allow streaming responses up to 30 seconds export const maxDuration = 30; export async function POST(req: Request) { const { messages, model, webSearch, }: { messages: UIMessage[]; model: string; webSearch: boolean; } = await req.json(); const result = streamText({ model: webSearch ? 'perplexity/sonar' : model, messages: convertToModelMessages(messages), system: 'You are a helpful assistant that can answer questions and help with tasks', }); // send sources and reasoning back to the client return result.toUIMessageStreamResponse({ sendSources: true, sendReasoning: true, }); }
+```
+
+
+```
+import { streamText, UIMessage, convertToModelMessages } from 'ai'; // Allow streaming responses up to 30 seconds export const maxDuration = 30; export async function POST(req: Request) { const { messages, model, webSearch, }: { messages: UIMessage[]; model: string; webSearch: boolean; } = await req.json(); const result = streamText({ model: webSearch ? 'perplexity/sonar' : model, messages: convertToModelMessages(messages), system: 'You are a helpful assistant that can answer questions and help with tasks', }); // send sources and reasoning back to the client return result.toUIMessageStreamResponse({ sendSources: true, sendReasoning: true, }); }
+```
+
+You now have a working chatbot app with file attachment support! The chatbot can handle both text and file inputs through the action menu. Feel free to explore other components like [Tool](https://ai-sdk.dev/elements/components/tool) or [Task](https://ai-sdk.dev/elements/components/task) to extend your app, or view the other examples.
+
+```
+Tool
+```
+
+
+```
+Task
+```
+
+[MCP ServerAI Elements supports the Model Context Protocol (MCP) for model-driven development.](https://ai-sdk.dev/elements/mcp)
+MCP Server
+AI Elements supports the Model Context Protocol (MCP) for model-driven development.
+[v0 cloneAn example of how to use the AI Elements to build a v0 clone.](https://ai-sdk.dev/elements/examples/v0)
+v0 clone
+An example of how to use the AI Elements to build a v0 clone.
+On this page
+[Tutorial](https://ai-sdk.dev/elements/examples/chatbot#tutorial)
+[Setup](https://ai-sdk.dev/elements/examples/chatbot#setup)
+[Client](https://ai-sdk.dev/elements/examples/chatbot#client)
+[Server](https://ai-sdk.dev/elements/examples/chatbot#server)
+[GitHubEdit this page on GitHub](https://github.com/vercel/ai-elements/edit/main/apps/docs/content/docs/examples/chatbot.mdx)
+[Vercel](https://vercel.com/)
+[AI SDK](https://ai-sdk.dev/)
+[Docs](https://ai-sdk.dev/docs)
+[Cookbook](https://ai-sdk.dev/cookbook)
+[Providers](https://ai-sdk.dev/providers)
+[Tools Registry](https://ai-sdk.dev/tools-registry)
+[Playground](https://ai-sdk.dev/playground)
+[AI ElementsAI ElementsLeft sparkleRight sparkle](https://ai-sdk.dev/elements)
+[AI GatewayGateway](https://vercel.com/ai-gateway)
+[Feedback](https://github.com/vercel/ai-elements/issues)
+[GitHub](https://github.com/vercel/ai-elements)
+[Vercel LogoSign in with Vercel](https://ai-sdk.dev/)
+AI SDK 6 is in Beta.
+[Learn more](https://ai-sdk.dev/docs/introduction/announcing-ai-sdk-6-beta)

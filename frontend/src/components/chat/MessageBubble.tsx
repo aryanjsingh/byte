@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useSession } from 'next-auth/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Reasoning,
     ReasoningContent,
     ReasoningTrigger,
 } from "@/components/ai-elements/reasoning";
-
-import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "@/components/ai-elements/tool";
+import { Tool, ToolContent, ToolHeader, ToolOutput } from "@/components/ai-elements/tool";
 
 interface Message {
     role: 'user' | 'assistant';
@@ -25,284 +25,441 @@ interface Message {
     }>;
     isNew?: boolean;
     isStreaming?: boolean;
+    imageData?: string;
+    imageMimeType?: string;
+    images?: Array<{
+        url: string;
+        thumbnail?: string;
+        title?: string;
+    }>;
+    generatedImage?: {
+        base64: string;
+        mimeType: string;
+        prompt: string;
+    };
 }
 
 interface MessageBubbleProps {
     message: Message;
+    index?: number;
 }
 
-const TIP_TITLES = [
-    "Security Tip",
-    "Byte Guard",
-    "Cyber Defense",
-    "Shield Up",
-    "Safety Protocol",
-    "Byte Insight",
-    "Cyber Wisdom",
-    "Defense Tactic"
-];
+const TIP_TITLES = ["Security Tip", "Byte Guard", "Cyber Defense", "Shield Up", "Safety Protocol"];
 
 const BlockquoteRenderer = ({ children, ...props }: any) => {
-    // Use useMemo to generate title once and keep it stable
-    const title = React.useMemo(() => TIP_TITLES[Math.floor(Math.random() * TIP_TITLES.length)], []);
+    const title = useMemo(() => TIP_TITLES[Math.floor(Math.random() * TIP_TITLES.length)], []);
     const [isOpen, setIsOpen] = useState(false);
 
     return (
-        <div
-            className="my-6 bg-amber-50 dark:bg-amber-900/10 border-l-4 border-amber-500 dark:border-amber-600 rounded-r-sm shadow-md relative overflow-hidden transition-all duration-300 hover:bg-amber-100/50 dark:hover:bg-amber-900/20 cursor-pointer group"
+        <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="my-6 glass-card rounded-xl overflow-hidden cursor-pointer group"
             onClick={() => setIsOpen(!isOpen)}
         >
-            <div className={`absolute top-0 right-0 w-24 h-24 bg-amber-100 dark:bg-amber-800/10 rounded-bl-full opacity-30 transition-transform duration-500 ${isOpen ? 'scale-150' : 'scale-100'}`}></div>
-
-            <div className="p-4 flex items-center gap-3 relative z-10">
-                <span className="material-symbols-outlined text-amber-600 dark:text-amber-500 text-[24px] shrink-0">shield</span>
+            <div className="p-4 flex items-center gap-3 border-l-4 border-amber-500">
+                <span className="material-symbols-outlined text-amber-400 text-[24px]">shield</span>
                 <div className="flex-1 flex items-center justify-between">
-                    <span className="text-xs font-bold text-amber-700 dark:text-amber-500 uppercase tracking-widest">{title}</span>
-                    <span className={`material-symbols-outlined text-amber-600 dark:text-amber-500 text-[20px] transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                    <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">{title}</span>
+                    <motion.span
+                        animate={{ rotate: isOpen ? 180 : 0 }}
+                        className="material-symbols-outlined text-amber-400 text-[20px]"
+                    >
                         expand_more
-                    </span>
+                    </motion.span>
                 </div>
             </div>
-
-            <div
-                className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
-            >
-                <div className="overflow-hidden">
-                    <div className="px-5 pb-5 pt-0 pl-[52px]">
-                        <blockquote className="text-amber-900 dark:text-amber-200 font-semibold leading-relaxed m-0" {...props}>
-                            {children}
-                        </blockquote>
-                    </div>
-                </div>
-            </div>
-        </div>
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                    >
+                        <div className="px-5 pb-5 pl-[52px]">
+                            <blockquote className="text-amber-200/80 font-medium leading-relaxed" {...props}>
+                                {children}
+                            </blockquote>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
     );
 };
 
-export default function MessageBubble({ message }: MessageBubbleProps) {
+export default function MessageBubble({ message, index = 0 }: MessageBubbleProps) {
     const isUser = message.role === 'user';
     const { data: session } = useSession();
     const [isSpeaking, setIsSpeaking] = useState(false);
+    const [copied, setCopied] = useState(false);
+    const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
     const handleSpeak = async () => {
-        if (isSpeaking) return;
+        // If already speaking, stop it
+        if (isSpeaking) {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+                audioRef.current = null;
+            }
+            // Also cancel any browser speech synthesis
+            window.speechSynthesis?.cancel();
+            setIsSpeaking(false);
+            return;
+        }
 
         setIsSpeaking(true);
         try {
             const token = (session as any)?.accessToken;
-            // Clean content for speech (remove markdown basics if needed, but simpler is fine)
-            // Just sending raw content for now, backend Piper handles some punctuation
             const response = await fetch("http://localhost:8000/tts", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ text: message.content })
             });
-
             if (!response.ok) throw new Error("TTS failed");
-
             const data = await response.json();
             if (data.audio) {
                 const audio = new Audio(`data:audio/wav;base64,${data.audio}`);
-                audio.onended = () => setIsSpeaking(false);
+                audioRef.current = audio;
+                audio.onended = () => {
+                    setIsSpeaking(false);
+                    audioRef.current = null;
+                };
                 audio.play();
             } else {
                 setIsSpeaking(false);
             }
         } catch (e) {
-            console.error("TTS Error:", e);
             setIsSpeaking(false);
         }
     };
 
+    const handleCopy = () => {
+        navigator.clipboard.writeText(message.content);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
     if (isUser) {
         return (
-            <div className="flex flex-row-reverse gap-4 group">
+            <motion.div
+                initial={{ opacity: 0, y: 20, x: 20 }}
+                animate={{ opacity: 1, y: 0, x: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                className="flex flex-row-reverse gap-4"
+            >
                 <div
-                    className="size-8 shrink-0 rounded-sm bg-cover bg-center mt-0.5 ring-1 ring-slate-200 dark:ring-white/10"
-                    style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB5WdPzHGhg_JAl03-xGWmaeGXOOAMw1k7EiEdkk1ZyR74ymN5ovU1YaMQJjxnadzTLasjBrBVZV7JtSOlTUjdglbRDF07mLWMzZUbLWDFfEd2z5msdwI_SSoaC-cbDgeWN5-gCK52ugOhOxt5QRuyQiCogkhBBIlJnOoSwesf-cDCsq3EFgqlJSnGBqONYG0SenUoNd3Dwyq_nmV1oj91ML1ZYsf80q9J6PvTG1YnkY46zyCQ8AGvwESpxlsZabNAPqwM72aZHIO0")' }}
-                ></div>
-                <div className="flex flex-col items-end gap-1 max-w-[85%]">
-                    <div className="flex items-center gap-2 flex-row-reverse">
-                        <span className="text-xs font-bold text-pl-text-dark dark:text-white">USER</span>
-                    </div>
-                    <div className="px-6 py-4 bg-pl-brand dark:bg-pl-border text-white dark:text-pl-text-primary rounded-sm border border-transparent dark:border-white/5 shadow-md tracking-wide">
-                        <div className="text-base leading-relaxed whitespace-pre-wrap">{message.content}</div>
-                    </div>
+                    className="size-10 shrink-0 rounded-xl bg-cover bg-center ring-2 ring-white/10"
+                    style={{ backgroundImage: 'url("https://api.dicebear.com/7.x/initials/svg?seed=U&backgroundColor=6366f1")' }}
+                />
+                <div className="flex flex-col items-end gap-2 max-w-[80%]">
+                    <span className="text-xs font-semibold text-white/40 uppercase tracking-wide">You</span>
+                    <motion.div
+                        whileHover={{ scale: 1.01 }}
+                        className="message-user px-5 py-4 rounded-2xl rounded-tr-md shadow-lg"
+                    >
+                        {message.imageData && message.imageMimeType && (
+                            <img
+                                src={`data:${message.imageMimeType};base64,${message.imageData}`}
+                                alt="Uploaded"
+                                className="max-w-sm rounded-lg mb-3 border border-white/10"
+                            />
+                        )}
+                        {message.content && (
+                            <p className="text-white text-[15px] leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                        )}
+                    </motion.div>
                 </div>
-            </div>
+            </motion.div>
         );
     }
 
     return (
-        <div className="flex gap-4 relative group animate-fade-in-up">
-            <div className="absolute left-[15px] top-[36px] bottom-6 w-[2px] bg-gradient-to-b from-pl-brand/0 via-pl-brand/50 to-pl-brand/0 animate-stream" style={{ backgroundSize: '100% 200%' }}></div>
-            <div className="size-8 shrink-0 rounded-sm bg-white dark:bg-pl-panel border border-slate-200 dark:border-pl-border flex items-center justify-center mt-0.5 z-10 shadow-sm">
-                <span className="material-symbols-outlined text-[18px] text-pl-brand">smart_toy</span>
-            </div>
-            <div className="flex flex-col gap-2 max-w-[90%] sm:max-w-[85%]">
-                <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-pl-text-dark dark:text-pl-brand">BYTE</span>
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: index * 0.05 }}
+            className="flex gap-4 relative"
+        >
+            {/* Animated Line */}
+            <div className="absolute left-[19px] top-[48px] bottom-8 w-[2px] bg-gradient-to-b from-blue-500/50 via-purple-500/30 to-transparent animate-stream" style={{ backgroundSize: '100% 200%' }} />
+
+            {/* Avatar */}
+            <motion.div
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                className="relative z-10"
+            >
+                <div className="size-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-lg glow-blue">
+                    <span className="material-symbols-outlined text-[20px]">auto_awesome</span>
+                </div>
+            </motion.div>
+
+            <div className="flex flex-col gap-3 max-w-[85%] flex-1">
+                {/* Header */}
+                <div className="flex items-center gap-3">
+                    <span className="text-xs font-semibold text-blue-400 uppercase tracking-wide">Byte</span>
                     {message.mode === 'turbo' && (
-                        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-blue-50 dark:bg-pl-brand/10 text-pl-brand border border-blue-100 dark:border-pl-brand/20 text-[9px] font-bold uppercase tracking-wide">
-                            <span className="material-symbols-outlined filled text-[10px]">bolt</span>
-                            Turbo Analysis
-                        </span>
+                        <motion.span
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30"
+                        >
+                            <span className="material-symbols-outlined text-[12px] text-blue-400">bolt</span>
+                            <span className="text-[10px] font-bold text-blue-400 uppercase">Turbo</span>
+                        </motion.span>
                     )}
+                    {/* Speaker Button */}
+                    <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={handleSpeak}
+                        className={`p-1.5 rounded-lg transition-all ${isSpeaking
+                            ? 'bg-blue-500/20 text-blue-400'
+                            : 'text-white/30 hover:text-white/60 hover:bg-white/5'
+                            }`}
+                        title="Speak"
+                    >
+                        <span className="material-symbols-outlined text-[14px]">{isSpeaking ? 'volume_up' : 'volume_mute'}</span>
+                    </motion.button>
                 </div>
 
-                {/* Thinking/Reasoning Display */}
+                {/* Thinking/Reasoning */}
                 {message.thinking && message.thinking.trim() && (
-                    <div className="mb-4">
-                        <Reasoning className="w-full" isStreaming={message.isStreaming || false}>
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        className="mb-2"
+                    >
+                        <Reasoning className="w-full" isStreaming={message.isStreaming || false} defaultOpen={false}>
                             <ReasoningTrigger />
-                            <ReasoningContent>
-                                {message.thinking}
-                            </ReasoningContent>
+                            <ReasoningContent>{message.thinking}</ReasoningContent>
                         </Reasoning>
-                    </div>
+                    </motion.div>
                 )}
 
-                {/* Tool Invocations (Live) - Using ai-elements */}
-                {message.toolInvocations && message.toolInvocations.map((tool, idx) => {
-                    // Map our status to ai-elements state
-                    let toolState: 'input-streaming' | 'input-available' | 'output-available' | 'output-error' = 'input-streaming';
-                    if (tool.status === 'calling') toolState = 'input-available'; // or input-streaming
-                    if (tool.status === 'completed') toolState = 'output-available';
-                    if (tool.status === 'failed') toolState = 'output-error';
+                {/* Tool Invocations */}
+                <AnimatePresence>
+                    {message.toolInvocations?.filter(tool => {
+                        const hiddenTools = ['cybersecurity_knowledge_search', 'risk_management_framework_query', 'image_search', 'image_gen'];
+                        return !hiddenTools.includes(tool.name);
+                    }).map((tool, idx) => {
+                        let toolState: 'input-streaming' | 'input-available' | 'output-available' | 'output-error' = 'input-streaming';
+                        if (tool.status === 'calling') toolState = 'input-available';
+                        if (tool.status === 'completed') toolState = 'output-available';
+                        if (tool.status === 'failed') toolState = 'output-error';
 
-                    return (
-                        <Tool key={tool.id || idx} open={true}>
-                            <ToolHeader
-                                type="tool-call"
-                                title={tool.name}
-                                state={toolState}
-                            />
-                            <ToolContent>
-                                {/* Input parameters hidden as per user request */}
-                                {tool.result && <ToolOutput output={tool.result} errorText={tool.status === 'failed' ? "Tool execution failed" : undefined} />}
-                            </ToolContent>
-                        </Tool>
-                    );
-                })}
+                        return (
+                            <motion.div
+                                key={tool.id || idx}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="mb-4"
+                            >
+                                {/* Styled collapsible with blue theme */}
+                                <div className="rounded-xl bg-blue-500/10 border border-blue-500/20 overflow-hidden">
+                                    <Tool defaultOpen={true}>
+                                        <ToolHeader type="tool-call" title={tool.name} state={toolState} />
+                                        <ToolContent>
+                                            {tool.result && (
+                                                <div className="p-4 bg-blue-500/5">
+                                                    <div className="text-sm text-white/80 whitespace-pre-wrap font-mono">
+                                                        {/* Parse and format the result nicely */}
+                                                        {tool.result.split('\n').map((line, i) => {
+                                                            // Highlight key metrics
+                                                            if (line.includes('Malicious:')) {
+                                                                const count = line.match(/\d+/)?.[0] || '0';
+                                                                const isRisky = parseInt(count) > 0;
+                                                                return (
+                                                                    <div key={i} className={`flex items-center gap-2 py-1 ${isRisky ? 'text-red-400' : 'text-green-400'}`}>
+                                                                        <span className="material-symbols-outlined text-[14px]">{isRisky ? 'error' : 'check_circle'}</span>
+                                                                        <span className="font-semibold">{line}</span>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            if (line.includes('Suspicious:')) {
+                                                                const count = line.match(/\d+/)?.[0] || '0';
+                                                                const isRisky = parseInt(count) > 0;
+                                                                return (
+                                                                    <div key={i} className={`flex items-center gap-2 py-1 ${isRisky ? 'text-amber-400' : 'text-green-400'}`}>
+                                                                        <span className="material-symbols-outlined text-[14px]">{isRisky ? 'warning' : 'check_circle'}</span>
+                                                                        <span className="font-semibold">{line}</span>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            if (line.includes('Harmless:') || line.includes('Undetected:')) {
+                                                                return (
+                                                                    <div key={i} className="flex items-center gap-2 py-1 text-white/60">
+                                                                        <span className="material-symbols-outlined text-[14px]">info</span>
+                                                                        <span>{line}</span>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            if (line.includes('Link:')) {
+                                                                const url = line.replace('Link:', '').trim();
+                                                                return (
+                                                                    <div key={i} className="flex items-center gap-2 py-2 mt-2 border-t border-white/10">
+                                                                        <span className="material-symbols-outlined text-[14px] text-blue-400">open_in_new</span>
+                                                                        <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-xs">
+                                                                            View Full Report on VirusTotal
+                                                                        </a>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            if (line.includes('Report for')) {
+                                                                return (
+                                                                    <div key={i} className="text-white/90 font-semibold pb-2 border-b border-white/10 mb-2">
+                                                                        {line}
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            return line ? <div key={i} className="py-0.5">{line}</div> : null;
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </ToolContent>
+                                    </Tool>
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </AnimatePresence>
 
-                <div className="bg-white dark:bg-pl-panel p-6 rounded-sm border border-slate-200 dark:border-pl-border shadow-sm dark:shadow-glow group tracking-wide">
-                    <div className="prose prose-sm dark:prose-invert max-w-none text-pl-text-med dark:text-pl-text-primary
-                        prose-p:leading-6 prose-p:mb-4
-                        prose-ul:my-4 prose-ul:space-y-2 prose-pl-0
-                        prose-li:leading-6 prose-li:flex prose-li:gap-2 before:content-none
-                        prose-headings:text-pl-text-dark dark:prose-headings:text-white prose-headings:font-bold prose-headings:mb-3 prose-headings:mt-6
-                        prose-strong:font-bold prose-strong:text-pl-text-dark dark:prose-strong:text-white
-                        prose-pre:bg-pl-bg-light dark:prose-pre:bg-black/20 prose-pre:border prose-pre:border-slate-200 dark:prose-pre:border-white/10 prose-pre:rounded-sm">
+                {/* Message Content */}
+                <motion.div
+                    whileHover={{ scale: 1.005 }}
+                    className="message-assistant p-6 rounded-2xl rounded-tl-md shadow-xl"
+                >
+                    <div className="prose prose-sm prose-invert max-w-none text-white/80
+                        prose-p:leading-7 prose-p:mb-4
+                        prose-headings:text-white prose-headings:font-bold
+                        prose-strong:text-white prose-strong:font-semibold
+                        prose-code:bg-white/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-blue-300 prose-code:text-sm
+                        prose-pre:bg-black/30 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-xl
+                        prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
+                        prose-ul:space-y-2 prose-li:text-white/70">
                         <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
                                 ul: ({ node, ...props }) => (
-                                    <div className="my-6 p-6 bg-pl-bg-light dark:bg-white/5 border-l-4 border-pl-brand rounded-sm relative overflow-hidden shadow-sm">
-                                        <div className="text-[10px] font-bold text-pl-brand dark:text-pl-text-secondary uppercase tracking-widest mb-4 opacity-80">
-                                            Detailed Analysis
-                                        </div>
-                                        <ul className="space-y-4" {...props} />
+                                    <div className="my-4 p-4 glass-subtle rounded-xl border-l-2 border-blue-500/50">
+                                        <ul className="space-y-3 list-none" {...props} />
                                     </div>
                                 ),
                                 ol: ({ node, ...props }) => (
-                                    <div className="my-6 p-6 bg-pl-bg-light dark:bg-white/5 border-l-4 border-pl-brand rounded-sm relative overflow-hidden shadow-sm">
-                                        <div className="text-[10px] font-bold text-pl-brand dark:text-pl-text-secondary uppercase tracking-widest mb-4 opacity-80">
-                                            Step-by-Step Breakdown
-                                        </div>
-                                        <ol className="list-decimal pl-4 space-y-4" {...props} />
+                                    <div className="my-4 p-4 glass-subtle rounded-xl border-l-2 border-purple-500/50">
+                                        <ol className="list-decimal pl-4 space-y-3" {...props} />
                                     </div>
                                 ),
-                                li: ({ node, children, ...props }) => {
-                                    return (
-                                        <li className="flex gap-3 text-[15px] leading-relaxed group/li" {...props}>
-                                            <span className="text-pl-brand mt-1.5 shrink-0 transition-transform group-hover/li:scale-125">•</span>
-                                            <span className="flex-1">{children}</span>
-                                        </li>
-                                    )
-                                },
-                                a: ({ node, ...props }) => <a className="text-pl-brand hover:underline font-medium break-all" target="_blank" rel="noopener noreferrer" {...props} />,
-                                blockquote: ({ node, children, ...props }) => {
-                                    // Use a hook-based component logic inline or extract it. 
-                                    // extracting to a defined component is safer for hooks.
-                                    return <BlockquoteRenderer {...props}>{children}</BlockquoteRenderer>;
-                                },
-                                p: ({ node, children, ...props }) => {
-                                    return <p className="font-bold leading-loose mb-6" {...props}>{children}</p>;
-                                },
+                                li: ({ node, children, ...props }) => (
+                                    <li className="flex gap-3 text-[15px] leading-relaxed" {...props}>
+                                        <span className="text-blue-400 mt-1">•</span>
+                                        <span className="flex-1 text-white/70">{children}</span>
+                                    </li>
+                                ),
+                                blockquote: BlockquoteRenderer,
+                                p: ({ node, children, ...props }) => (
+                                    <p className="text-[15px] leading-7 text-white/80" {...props}>{children}</p>
+                                ),
                                 code: ({ node, className, children, ...props }) => {
                                     const match = /language-(\w+)/.exec(className || '');
-                                    const isInline = !match;
-                                    return isInline ? (
-                                        <code className="bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 rounded text-xs font-mono text-pl-text-dark dark:text-pl-text-primary border border-slate-200 dark:border-white/5" {...props}>
+                                    return !match ? (
+                                        <code className="bg-white/10 px-1.5 py-0.5 rounded text-sm font-mono text-blue-300" {...props}>
                                             {children}
                                         </code>
                                     ) : (
-                                        <code className={className} {...props}>
-                                            {children}
-                                        </code>
+                                        <code className={className} {...props}>{children}</code>
                                     );
                                 }
                             }}
                         >
                             {message.content.replace(/\]\s+\(/g, '](')}
                         </ReactMarkdown>
-                        {/* Streaming cursor */}
+
+                        {/* Streaming Cursor */}
                         {message.isStreaming && (
-                            <span className="inline-block w-2 h-4 bg-pl-brand animate-pulse ml-1 align-middle"></span>
+                            <motion.span
+                                animate={{ opacity: [1, 0] }}
+                                transition={{ duration: 0.8, repeat: Infinity }}
+                                className="inline-block w-2 h-5 bg-blue-400 ml-1 align-middle rounded-sm"
+                            />
                         )}
                     </div>
 
-                    {/* Tool Tags */}
-                    {message.role === 'assistant' && message.tool_calls && message.tool_calls.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-white/5 opacity-80 hover:opacity-100 transition-opacity">
-                            {message.tool_calls.map((tool, idx) => {
-                                const toolMap: Record<string, { label: string, color: string, icon: string }> = {
-                                    'virustotal_scan': { label: 'VirusTotal', color: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800', icon: 'security' },
-                                    'greynoise_ip_check': { label: 'GreyNoise', color: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800', icon: 'router' },
-                                    'update_user_security_profile': { label: 'Profile Updated', color: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800', icon: 'person_search' },
-                                };
-                                const config = toolMap[tool] || { label: tool, color: 'bg-slate-50 dark:bg-white/5 text-pl-text-med dark:text-pl-text-secondary border-slate-200 dark:border-white/10', icon: 'settings' };
-
-                                return (
-                                    <div key={idx} className={`flex items-center gap-1.5 px-2 py-1 rounded-sm border text-[10px] font-bold uppercase tracking-wider ${config.color} select-none`}>
-                                        <span className="material-symbols-outlined text-[12px]">{config.icon}</span>
-                                        {config.label}
-                                    </div>
-                                );
-                            })}
-                        </div>
+                    {/* Image Grid from image_search tool */}
+                    {message.images && message.images.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="mt-6 pt-6 border-t border-white/10"
+                        >
+                            <div className="text-sm text-white/50 mb-3 font-medium">Related Images:</div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {message.images.slice(0, 4).map((img, idx) => (
+                                    <motion.a
+                                        key={idx}
+                                        href={img.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="group relative overflow-hidden rounded-xl glass-card border border-white/10 hover:border-blue-500/50 transition-all duration-300"
+                                        whileHover={{ scale: 1.01, y: -2 }}
+                                        whileTap={{ scale: 0.99 }}
+                                    >
+                                        <div className="relative overflow-hidden bg-black/20">
+                                            <img
+                                                src={img.url}
+                                                alt={img.title || `Image ${idx + 1}`}
+                                                className="w-full h-auto max-h-[300px] object-contain group-hover:scale-105 transition-transform duration-500"
+                                                loading="lazy"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
+                                                <span className="text-white text-sm line-clamp-2">{img.title}</span>
+                                            </div>
+                                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                <span className="material-symbols-outlined text-white text-[16px] bg-black/50 rounded-full p-1.5">
+                                                    open_in_new
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </motion.a>
+                                ))}
+                            </div>
+                        </motion.div>
                     )}
 
-                    <div className="flex items-center gap-1 mt-4 pt-3 border-t border-slate-100 dark:border-white/5">
-                        <button
-                            onClick={handleSpeak}
-                            disabled={isSpeaking}
-                            className={`p-1.5 rounded hover:bg-slate-100 dark:hover:bg-white/5 text-pl-text-sub hover:text-pl-text-dark dark:text-pl-text-secondary dark:hover:text-pl-text-primary transition-colors ${isSpeaking ? 'text-pl-brand animate-pulse' : ''}`}
-                            title="Speak"
+                    {/* Generated Image from image_gen tool */}
+
+                    {message.generatedImage && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="mt-6 pt-6 border-t border-white/10"
                         >
-                            <span className="material-symbols-outlined text-[16px]">
-                                {isSpeaking ? 'volume_up' : 'volume_mute'}
-                            </span>
-                        </button>
-                        <button className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-white/5 text-pl-text-sub hover:text-pl-text-dark dark:text-pl-text-secondary dark:hover:text-pl-text-primary transition-colors" title="Copy to Clipboard">
-                            <span className="material-symbols-outlined text-[16px]">content_copy</span>
-                        </button>
-                        <button className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-white/5 text-pl-text-sub hover:text-pl-text-dark dark:text-pl-text-secondary dark:hover:text-pl-text-primary transition-colors" title="Regenerate Response">
-                            <span className="material-symbols-outlined text-[16px]">refresh</span>
-                        </button>
-                        <div className="w-px h-3 bg-slate-200 dark:bg-white/10 mx-1"></div>
-                        <button className="p-1.5 rounded hover:bg-green-50 dark:hover:bg-green-900/20 text-pl-text-sub hover:text-green-600 dark:text-pl-text-secondary dark:hover:text-green-400 transition-colors">
-                            <span className="material-symbols-outlined text-[16px]">thumb_up</span>
-                        </button>
-                        <button className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-pl-text-sub hover:text-red-600 dark:text-pl-text-secondary dark:hover:text-red-400 transition-colors">
-                            <span className="material-symbols-outlined text-[16px]">thumb_down</span>
-                        </button>
-                    </div>
-                </div>
+                            <div className="flex items-center gap-2 text-sm text-purple-400 mb-3 font-medium">
+                                <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
+                                AI Generated Image
+                            </div>
+                            <div className="relative group rounded-xl overflow-hidden border-2 border-purple-500/30 hover:border-purple-500/60 transition-all duration-300 shadow-lg shadow-purple-500/10">
+                                <img
+                                    src={`data:${message.generatedImage.mimeType};base64,${message.generatedImage.base64}`}
+                                    alt={message.generatedImage.prompt || "AI Generated"}
+                                    className="w-full rounded-xl"
+                                />
+                                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    <p className="text-white text-sm font-medium line-clamp-2">
+                                        {message.generatedImage.prompt}
+                                    </p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
+                </motion.div>
             </div>
-        </div>
+        </motion.div>
     );
 }

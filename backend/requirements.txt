@@ -20,3 +20,8 @@ python-jose[cryptography]
 python-multipart
 langchain-chroma
 chromadb
+
+detoxify
+transformers
+torch
+safetensors
