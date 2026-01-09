@@ -8,12 +8,21 @@ import {
     ReasoningTrigger,
 } from "@/components/ai-elements/reasoning";
 
+import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "@/components/ai-elements/tool";
+
 interface Message {
     role: 'user' | 'assistant';
     content: string;
     thinking?: string;
     mode?: 'simple' | 'turbo';
     tool_calls?: string[];
+    toolInvocations?: Array<{
+        id: string;
+        name: string;
+        args?: any;
+        result?: string;
+        status: 'calling' | 'completed' | 'failed';
+    }>;
     isNew?: boolean;
     isStreaming?: boolean;
 }
@@ -34,12 +43,9 @@ const TIP_TITLES = [
 ];
 
 const BlockquoteRenderer = ({ children, ...props }: any) => {
-    const [title, setTitle] = useState("Security Tip");
+    // Use useMemo to generate title once and keep it stable
+    const title = React.useMemo(() => TIP_TITLES[Math.floor(Math.random() * TIP_TITLES.length)], []);
     const [isOpen, setIsOpen] = useState(false);
-
-    useEffect(() => {
-        setTitle(TIP_TITLES[Math.floor(Math.random() * TIP_TITLES.length)]);
-    }, []);
 
     return (
         <div
@@ -138,7 +144,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
             </div>
             <div className="flex flex-col gap-2 max-w-[90%] sm:max-w-[85%]">
                 <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-pl-text-dark dark:text-pl-brand">SYSTEM</span>
+                    <span className="text-xs font-bold text-pl-text-dark dark:text-pl-brand">BYTE</span>
                     {message.mode === 'turbo' && (
                         <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-blue-50 dark:bg-pl-brand/10 text-pl-brand border border-blue-100 dark:border-pl-brand/20 text-[9px] font-bold uppercase tracking-wide">
                             <span className="material-symbols-outlined filled text-[10px]">bolt</span>
@@ -158,6 +164,29 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
                         </Reasoning>
                     </div>
                 )}
+
+                {/* Tool Invocations (Live) - Using ai-elements */}
+                {message.toolInvocations && message.toolInvocations.map((tool, idx) => {
+                    // Map our status to ai-elements state
+                    let toolState: 'input-streaming' | 'input-available' | 'output-available' | 'output-error' = 'input-streaming';
+                    if (tool.status === 'calling') toolState = 'input-available'; // or input-streaming
+                    if (tool.status === 'completed') toolState = 'output-available';
+                    if (tool.status === 'failed') toolState = 'output-error';
+
+                    return (
+                        <Tool key={tool.id || idx} open={true}>
+                            <ToolHeader
+                                type="tool-call"
+                                title={tool.name}
+                                state={toolState}
+                            />
+                            <ToolContent>
+                                {/* Input parameters hidden as per user request */}
+                                {tool.result && <ToolOutput output={tool.result} errorText={tool.status === 'failed' ? "Tool execution failed" : undefined} />}
+                            </ToolContent>
+                        </Tool>
+                    );
+                })}
 
                 <div className="bg-white dark:bg-pl-panel p-6 rounded-sm border border-slate-200 dark:border-pl-border shadow-sm dark:shadow-glow group tracking-wide">
                     <div className="prose prose-sm dark:prose-invert max-w-none text-pl-text-med dark:text-pl-text-primary
@@ -220,6 +249,10 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
                         >
                             {message.content.replace(/\]\s+\(/g, '](')}
                         </ReactMarkdown>
+                        {/* Streaming cursor */}
+                        {message.isStreaming && (
+                            <span className="inline-block w-2 h-4 bg-pl-brand animate-pulse ml-1 align-middle"></span>
+                        )}
                     </div>
 
                     {/* Tool Tags */}

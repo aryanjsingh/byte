@@ -23,14 +23,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Configuration ---
-# Gemini 2.5 Pro Configuration with Thinking and Streaming
+# Gemini Configuration with Streaming
+# Note: WebSocket endpoint now uses native_gemini_agent.py for thinking support
+# This LLM is only used by the regular /chat endpoint (non-streaming)
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash-lite",
+    model="gemini-2.5-pro",
     temperature=0.7,
-    streaming=True,  # Enable streaming for real-time responses
-    # Thinking configuration for Gemini 2.5 Pro
-    # Note: LangChain's ChatGoogleGenerativeAI may not directly support thinking config
-    # We'll handle this at the API level if needed
+    streaming=True
 )
 print("🔥 DEBUG: Agent LLM Initialized with gemini-2.5-pro")
 

@@ -29,12 +29,12 @@ try:
     VOICE_ENABLED = True
     print("✅ Voice handler initialized")
 except ImportError as e:
-    print(f"⚠️  Voice handler not available: {e}")
-    print("   Voice features disabled. Install lightning-whisper-mlx to enable.")
+    print(f"ℹ️  Voice features disabled (optional): {e}")
+    print("   Install 'lightning-whisper-mlx' to enable voice chat - this is optional.")
     voice_handler = None
     VOICE_ENABLED = False
 
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
 from fastapi import UploadFile, File, Form
 
 @asynccontextmanager
@@ -179,152 +179,67 @@ async def websocket_chat_endpoint(
                         session.add(thread)
                         session.commit()
                 
-                # Invoke agent with streaming using Gemini Thinking Wrapper
-                from backend.ai_engine.our_ai_engine.gemini_thinking import get_thinking_wrapper
+                # Use Native Gemini Agent with proper function calling
+                from backend.ai_engine.our_ai_engine.native_gemini_agent import get_native_agent, Message
                 
-                thinking_wrapper = get_thinking_wrapper()
+                native_agent = get_native_agent()
                 
-                # Prepare messages for direct Gemini thinking stream
-                # We need to extract the final messages after context retrieval
-                config_state = {"configurable": {"thread_id": current_thread_id}}
-                inputs_for_context = {
-                    "messages": [HumanMessage(content=user_message)],
-                    "user_id": str(current_user.id),
-                    "mode": mode
-                }
+                # Convert history to Message format
+                messages_for_agent = []
                 
-                # Stream response from agent
+                # Load Conversation History from DB
+                try:
+                    # Fetch last 20 messages for context
+                    statement = select(ConversationLog).where(
+                        ConversationLog.thread_id == current_thread_id
+                    ).order_by(ConversationLog.created_at.asc()).limit(20)
+                    
+                    history_logs = session.exec(statement).all()
+                    
+                    for log in history_logs:
+                        if log.role == 'user':
+                            messages_for_agent.append(Message(role="user", content=log.content))
+                        elif log.role == 'assistant':
+                            # Simplify history by just including text content
+                            if log.content:
+                                messages_for_agent.append(Message(role="model", content=log.content))
+                except Exception as e:
+                    print(f"⚠️ Failed to load history: {e}\"")
+                
+                # Add current user message
+                messages_for_agent.append(Message(role="user", content=user_message))
+                
+                print(f"🔥 DEBUG: Starting Native Agent Loop for thread {current_thread_id}")
+                
                 thinking_content = ""
                 answer_content = ""
                 tool_calls_list = []
+                event_count = 0
                 
                 try:
-                    print(f"🔥 DEBUG: Starting Gemini thinking stream for thread {current_thread_id} in mode {mode}")
-                    print(f"   User message: {user_message[:100]}...")
-                    print(f"   Thinking wrapper enabled: {thinking_wrapper.thinking_enabled}")
-                    
-                    chunk_count = 0
-                    thinking_chunk_count = 0
-                    answer_chunk_count = 0
-                    
-                    # Use the native thinking wrapper for direct streaming
-                    if thinking_wrapper.thinking_enabled:
-                        print("✅ Using native Gemini thinking wrapper")
+                    async for event in native_agent.run_agent_loop(
+                        messages=messages_for_agent,
+                        user_id=str(current_user.id),
+                        mode=mode,
+                        thinking_budget=1024
+                    ):
+                        event_count += 1
+                        msg_type = event["type"]
                         
-                        # Get the context-enriched messages from retrieve_context node
-                        from backend.ai_engine.our_ai_engine.agent import retrieve_context
-                        context_state = retrieve_context(inputs_for_context)
+                        print(f"📤 WS SEND #{event_count}: type={msg_type}, content_len={len(str(event.get('content', '')))}")
+                        await websocket.send_json(event)
+                        print(f"📤 WS SEND #{event_count}: SENT!")
                         
-                        # Combine system message with user message
-                        final_messages = context_state["messages"] + [HumanMessage(content=user_message)]
-                        
-                        print(f"   Final messages count: {len(final_messages)}")
-                        for i, msg in enumerate(final_messages):
-                            msg_type = type(msg).__name__
-                            preview = (msg.content[:50] + "...") if hasattr(msg, 'content') and msg.content else "EMPTY"
-                            print(f"   Msg {i}: {msg_type} - {preview}")
-                        
-                        # Stream with thinking
-                        async for chunk in thinking_wrapper.generate_with_thinking_stream(
-                            messages=final_messages,
-                            thinking_budget=-1,  # Dynamic thinking
-                            include_thoughts=True
-                        ):
-                            chunk_count += 1
-                            chunk_type = chunk.get("type")
-                            chunk_content = chunk.get("content", "")
-                            
-                            print(f"📦 Chunk {chunk_count} - Type: {chunk_type}, Length: {len(chunk_content)}")
-                            
-                            if chunk_type == "thinking":
-                                thinking_chunk_count += 1
-                                thinking_content += chunk_content
-                                await websocket.send_json({
-                                    "type": "thinking",
-                                    "content": chunk_content
-                                })
-                                print(f"   💭 Sent thinking chunk {thinking_chunk_count}")
-                                
-                            elif chunk_type == "answer":
-                                answer_chunk_count += 1
-                                answer_content += chunk_content
-                                await websocket.send_json({
-                                    "type": "answer",
-                                    "content": chunk_content
-                                })
-                                print(f"   💬 Sent answer chunk {answer_chunk_count}")
-                                
-                            elif chunk_type == "error":
-                                print(f"   ❌ Error chunk: {chunk_content}")
-                                await websocket.send_json({
-                                    "type": "error",
-                                    "error": chunk_content
-                                })
-                                
-                    else:
-                        # Fallback to LangGraph agent without thinking
-                        print("⚠️  Falling back to LangGraph agent (no thinking)")
-                        async for chunk in agent_app.astream(inputs_for_context, config=config_state):
-                            chunk_count += 1
-                            print(f"📦 LangGraph chunk {chunk_count}: {list(chunk.keys())}")
-                            
-                            for node_name, node_output in chunk.items():
-                                if isinstance(node_output, dict) and "messages" in node_output:
-                                    messages = node_output["messages"]
-                                    
-                                    for msg in messages:
-                                        if isinstance(msg, AIMessage):
-                                            content_str = ""
-                                            if isinstance(msg.content, list):
-                                                for part in msg.content:
-                                                    if isinstance(part, dict) and 'text' in part:
-                                                        content_str += part['text']
-                                                    elif hasattr(part, 'text'):
-                                                        content_str += part.text
-                                                    elif isinstance(part, str):
-                                                        content_str += part
-                                            else:
-                                                content_str = msg.content or ""
-                                            
-                                            # Check for tool calls
-                                            if hasattr(msg, 'tool_calls') and msg.tool_calls:
-                                                for tc in msg.tool_calls:
-                                                    tname = tc.get("name")
-                                                    if tname and tname not in tool_calls_list:
-                                                        tool_calls_list.append(tname)
-                                            
-                                            # Send content
-                                            if content_str:
-                                                await websocket.send_json({
-                                                    "type": "answer",
-                                                    "content": content_str
-                                                })
-                                                answer_content += content_str
+                        if msg_type == "tool_call":
+                            t_name = event["tool_name"]
+                            if t_name not in tool_calls_list:
+                                tool_calls_list.append(t_name)
+                        elif msg_type == "answer":
+                             answer_content += event.get("content", "")
+                        elif msg_type == "thinking":
+                             thinking_content += event.get("content", "")
                     
-                    print(f"✅ Stream finished:")
-                    print(f"   Total chunks: {chunk_count}")
-                    print(f"   Thinking chunks: {thinking_chunk_count}")
-                    print(f"   Answer chunks: {answer_chunk_count}")
-                    print(f"   Thinking length: {len(thinking_content)}")
-                    print(f"   Answer length: {len(answer_content)}")
-                    print(f"   Tool calls: {tool_calls_list}")
-                    
-                    
-                    if chunk_count == 0:
-                        print("⚠️ WARNING: Agent stream produced ZERO chunks!")
-                        await websocket.send_json({
-                            "type": "error",
-                            "error": "Agent produced no response. Please try again."
-                        })
-                        continue
-                    
-                    if not answer_content:
-                        print("⚠️ WARNING: Agent stream produced chunks but NO content!")
-                        await websocket.send_json({
-                            "type": "error",
-                            "error": "Agent produced no content. Please try again."
-                        })
-                        continue
+                    print(f"📤 WS: Stream complete. Total events={event_count}, thinking_len={len(thinking_content)}, answer_len={len(answer_content)}")
                     
                     # Send completion
                     await websocket.send_json({
@@ -332,6 +247,7 @@ async def websocket_chat_endpoint(
                         "thread_id": current_thread_id,
                         "tool_calls": tool_calls_list
                     })
+                    print(f"📤 WS: Sent 'done' event")
                     
                     # Log to database
                     log_user = ConversationLog(
@@ -358,16 +274,29 @@ async def websocket_chat_endpoint(
                     print(f"❌ Error during agent streaming: {e}")
                     import traceback
                     traceback.print_exc()
-                    await websocket.send_json({
-                        "type": "error",
-                        "error": str(e)
-                    })
+                    try:
+                        await websocket.send_json({
+                            "type": "error",
+                            "error": str(e)
+                        })
+                    except:
+                        pass  # Connection already closed
+
                     
             except json.JSONDecodeError:
-                await websocket.send_json({"type": "error", "error": "Invalid JSON"})
+                try:
+                    await websocket.send_json({"type": "error", "error": "Invalid JSON"})
+                except:
+                    pass
+            except WebSocketDisconnect:
+                print(f"WebSocket disconnected during message processing")
+                break
             except Exception as e:
                 print(f"Error processing message: {e}")
-                await websocket.send_json({"type": "error", "error": str(e)})
+                try:
+                    await websocket.send_json({"type": "error", "error": str(e)})
+                except:
+                    pass
                 
     except WebSocketDisconnect:
         print(f"WebSocket disconnected for user {current_user.email if 'current_user' in locals() else 'unknown'}")

@@ -7,12 +7,21 @@ import InputArea from '@/components/chat/InputArea';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
+interface ToolCallInfo {
+    id: string; // unique idea
+    name: string;
+    args?: any;
+    result?: string;
+    status: 'calling' | 'completed' | 'failed';
+}
+
 interface Message {
     role: 'user' | 'assistant';
     content: string;
     thinking?: string;
     mode?: 'simple' | 'turbo';
     tool_calls?: string[];
+    toolInvocations?: ToolCallInfo[];
     isNew?: boolean;
     isStreaming?: boolean;
 }
@@ -36,11 +45,13 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
     const [wsConnected, setWsConnected] = useState(false);
     const [thinkingContent, setThinkingContent] = useState("");
     const [streamingContent, setStreamingContent] = useState("");
+    const [toolInvocations, setToolInvocations] = useState<ToolCallInfo[]>([]);
     const [isThinking, setIsThinking] = useState(false);
 
     // Refs to track content inside WebSocket closure without dependencies
     const thinkingRef = useRef("");
     const streamingRef = useRef("");
+    const toolInvocationsRef = useRef<ToolCallInfo[]>([]);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const wsRef = useRef<WebSocket | null>(null);
@@ -51,7 +62,7 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages, isLoading, streamingContent, thinkingContent]);
+    }, [messages, isLoading, streamingContent, thinkingContent, toolInvocations]);
 
     // WebSocket Connection Management
     useEffect(() => {
@@ -77,34 +88,83 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
             websocket.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
+                    console.log(`📥 WS RECV: type=${data.type}, content_len=${(data.content || '').length}`);
 
                     if (data.type === 'thinking') {
                         setIsThinking(true);
                         // Update both state (for UI) and ref (for closure)
                         const newContent = data.content || '';
-                        setThinkingContent(prev => prev + newContent);
+                        setThinkingContent(prev => {
+                            const updated = prev + newContent;
+                            console.log(`🧠 THINKING STATE: prev_len=${prev.length}, new_len=${newContent.length}, total=${updated.length}`);
+                            return updated;
+                        });
                         thinkingRef.current += newContent;
+                        console.log('🧠 Thinking chunk received, length:', newContent.length);
 
                     } else if (data.type === 'answer') {
+                        setIsThinking(false); // No longer in thinking phase
                         const newContent = data.content || '';
-                        setStreamingContent(prev => prev + newContent);
+                        setStreamingContent(prev => {
+                            const updated = prev + newContent;
+                            console.log(`📝 ANSWER STATE: prev_len=${prev.length}, new_len=${newContent.length}, total=${updated.length}`);
+                            return updated;
+                        });
                         streamingRef.current += newContent;
+                        console.log('📝 Answer chunk received, length:', newContent.length);
+
+                    } else if (data.type === 'tool_call') {
+                        console.log(`🔧 TOOL_CALL: ${data.tool_name}`, data.tool_args);
+                        const newTool: ToolCallInfo = {
+                            id: data.tool_call_id || Date.now().toString(),
+                            name: data.tool_name,
+                            args: data.tool_args,
+                            status: 'calling'
+                        };
+                        setToolInvocations(prev => [...prev, newTool]);
+                        toolInvocationsRef.current = [...toolInvocationsRef.current, newTool];
+
+                    } else if (data.type === 'tool_result') {
+                        console.log(`🔧 TOOL_RESULT: ${data.tool_name}`, data.content?.substring(0, 100));
+                        setToolInvocations(prev => prev.map(tool =>
+                            tool.id === data.tool_call_id || tool.name === data.tool_name ?
+                                { ...tool, result: data.content, status: 'completed' } : tool
+                        ));
+                        // Update ref as well
+                        toolInvocationsRef.current = toolInvocationsRef.current.map(tool =>
+                            tool.id === data.tool_call_id || tool.name === data.tool_name ?
+                                { ...tool, result: data.content, status: 'completed' } : tool
+                        );
 
                     } else if (data.type === 'done') {
-                        console.log('   ✅ Stream complete');
+                        console.log('✅ DONE: Stream complete');
+                        console.log('   Final content length:', streamingRef.current.length);
+                        console.log('   Final thinking length:', thinkingRef.current.length);
+                        console.log('   Tool invocations:', toolInvocationsRef.current.length);
 
-                        // Finalize message using REF values which are up-to-date
-                        const finalMessage: Message = {
-                            role: 'assistant',
-                            content: streamingRef.current,
-                            thinking: thinkingRef.current || undefined,
-                            mode: mode,
-                            tool_calls: data.tool_calls || [],
-                            isNew: true,
-                            isStreaming: false
-                        };
+                        // Only add message if there's actual content
+                        if (streamingRef.current.trim() || thinkingRef.current.trim()) {
+                            // Finalize message using REF values which are up-to-date
+                            const finalMessage: Message = {
+                                role: 'assistant',
+                                content: streamingRef.current,
+                                thinking: thinkingRef.current || undefined,
+                                mode: mode,
+                                tool_calls: data.tool_calls || toolInvocationsRef.current.map(t => t.name),
+                                toolInvocations: toolInvocationsRef.current.length > 0 ? [...toolInvocationsRef.current] : undefined,
+                                isNew: true,
+                                isStreaming: false
+                            };
 
-                        setMessages(prev => [...prev, finalMessage]);
+                            setMessages(prev => [...prev, finalMessage]);
+
+                            // Clear isNew flag after animation
+                            setTimeout(() => {
+                                setMessages(prev => prev.map(msg =>
+                                    msg === finalMessage ? { ...msg, isNew: false } : msg
+                                ));
+                            }, 2000);
+                        }
 
                         // Update thread ID if needed
                         if (!currentThreadId && data.thread_id) {
@@ -115,17 +175,12 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
                         // Reset streaming state AND refs
                         setThinkingContent('');
                         setStreamingContent('');
+                        setToolInvocations([]);
                         thinkingRef.current = '';
                         streamingRef.current = '';
+                        toolInvocationsRef.current = [];
                         setIsThinking(false);
                         setIsLoading(false);
-
-                        // Clear isNew flag after animation
-                        setTimeout(() => {
-                            setMessages(prev => prev.map(msg =>
-                                msg === finalMessage ? { ...msg, isNew: false } : msg
-                            ));
-                        }, 2000);
                     } else if (data.type === 'error') {
                         console.error('❌ WebSocket error message:', data.error);
                         setMessages(prev => [...prev, {
@@ -135,8 +190,10 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
                         setIsLoading(false);
                         setThinkingContent('');
                         setStreamingContent('');
+                        setToolInvocations([]);
                         thinkingRef.current = '';
                         streamingRef.current = '';
+                        toolInvocationsRef.current = [];
                         setIsThinking(false);
                     }
                 } catch (e) {
@@ -169,12 +226,16 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
 
     // Handle Thread Switching
     useEffect(() => {
-        setCurrentThreadId(threadId);
-
         if (!threadId) {
+            setCurrentThreadId(undefined);
             setMessages([]);
             return;
         }
+
+        // Avoid re-setting if we are already on this thread
+        if (threadId === currentThreadId && messages.length > 0) return;
+
+        setCurrentThreadId(threadId);
 
         const loadHistory = async () => {
             if (status === 'authenticated' && session?.user) {
@@ -210,7 +271,8 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
         };
 
         loadHistory();
-    }, [threadId, status, session]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [threadId]); // Only reload if threadId changes explicitly
 
     const sendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -241,8 +303,10 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
         setIsLoading(true);
         setThinkingContent('');
         setStreamingContent('');
+        setToolInvocations([]);
         thinkingRef.current = '';
         streamingRef.current = '';
+        toolInvocationsRef.current = [];
         console.log('🔄 Reset input and streaming state');
 
         try {
@@ -376,7 +440,7 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
                             </div>
                             <div className="flex flex-col gap-2 max-w-[90%] sm:max-w-[85%]">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold text-pl-text-dark dark:text-pl-brand">SYSTEM</span>
+                                    <span className="text-xs font-bold text-pl-text-dark dark:text-pl-brand">BYTE</span>
                                     <span className="text-[10px] text-pl-text-sub dark:text-zinc-600">10:23:05</span>
                                 </div>
                                 <div className="bg-white dark:bg-pl-panel p-4 rounded-sm border border-slate-200 dark:border-pl-border shadow-sm dark:shadow-none">
@@ -409,29 +473,20 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
                     )}
 
                     {/* Show streaming thinking and answer */}
-                    {(isThinking || streamingContent) && (
+                    {isLoading && (
                         <MessageBubble
                             message={{
                                 role: 'assistant',
                                 content: streamingContent,
                                 thinking: thinkingContent,
                                 mode: mode,
+                                toolInvocations: toolInvocations,
                                 isStreaming: true
                             }}
                         />
                     )}
 
-                    {isLoading && !isThinking && !streamingContent && (
-                        <div className="flex gap-4 animate-pulse">
-                            <div className="size-8 shrink-0 rounded-sm bg-white dark:bg-pl-panel border border-slate-200 dark:border-pl-border flex items-center justify-center mt-0.5">
-                                <span className="material-symbols-outlined text-[18px] text-pl-brand animate-spin">sync</span>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <span className="text-xs font-bold text-pl-text-dark dark:text-pl-brand">SYSTEM</span>
-                                <div className="h-10 w-48 bg-slate-200 dark:bg-white/5 rounded-sm"></div>
-                            </div>
-                        </div>
-                    )}
+                    {/* Remove the separate loading indicator since we always show streaming bubble when loading */}
                     <div ref={messagesEndRef} />
                 </div>
             </div>
