@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { API_BASE_URL } from "@/lib/constants";
 
 interface Question {
     id: number;
@@ -67,7 +68,7 @@ export default function QuizPage() {
 
     const fetchCategories = async () => {
         try {
-            const res = await fetch("http://localhost:8000/tools/quiz/categories", {
+            const res = await fetch(`${API_BASE_URL}/tools/quiz/categories`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (res.ok) {
@@ -79,7 +80,7 @@ export default function QuizPage() {
 
     const fetchHistory = async () => {
         try {
-            const res = await fetch("http://localhost:8000/tools/quiz/history?limit=10", {
+            const res = await fetch(`${API_BASE_URL}/tools/quiz/history?limit=10`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (res.ok) {
@@ -92,7 +93,7 @@ export default function QuizPage() {
     const startQuiz = async () => {
         setLoading(true);
         try {
-            const res = await fetch("http://localhost:8000/tools/quiz/start", {
+            const res = await fetch(`${API_BASE_URL}/tools/quiz/start`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -134,14 +135,14 @@ export default function QuizPage() {
         const timeTaken = Math.round((Date.now() - startTime) / 1000);
 
         try {
-            const res = await fetch("http://localhost:8000/tools/quiz/submit", {
+            const res = await fetch(`${API_BASE_URL}/tools/quiz/submit`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ 
-                    answers: finalAnswers, 
+                body: JSON.stringify({
+                    answers: finalAnswers,
                     time_taken_seconds: timeTaken,
                     quiz_id: quizId  // Pass quiz_id for AI-generated quizzes
                 }),
@@ -233,11 +234,10 @@ export default function QuizPage() {
                                             <button
                                                 key={cat.id}
                                                 onClick={() => setSelectedCategory(cat.id)}
-                                                className={`p-4 rounded-xl text-left transition-all ${
-                                                    selectedCategory === cat.id
+                                                className={`p-4 rounded-xl text-left transition-all ${selectedCategory === cat.id
                                                         ? "bg-green-500/20 border-2 border-green-500/50"
                                                         : "bg-white/5 border-2 border-transparent hover:bg-white/10"
-                                                }`}
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-3 mb-2">
                                                     <span className="material-symbols-outlined text-green-400">
@@ -321,9 +321,8 @@ export default function QuizPage() {
                                         {questions.map((_, idx) => (
                                             <div
                                                 key={idx}
-                                                className={`w-8 h-1 rounded-full ${
-                                                    idx < currentIndex ? "bg-green-500" : idx === currentIndex ? "bg-blue-500" : "bg-white/20"
-                                                }`}
+                                                className={`w-8 h-1 rounded-full ${idx < currentIndex ? "bg-green-500" : idx === currentIndex ? "bg-blue-500" : "bg-white/20"
+                                                    }`}
                                             />
                                         ))}
                                     </div>

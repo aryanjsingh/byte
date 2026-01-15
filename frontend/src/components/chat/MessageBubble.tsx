@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { API_BASE_URL } from '@/lib/constants';
 import {
     Reasoning,
     ReasoningContent,
@@ -113,7 +114,7 @@ export default function MessageBubble({ message, index = 0 }: MessageBubbleProps
         setIsSpeaking(true);
         try {
             const token = (session as any)?.accessToken;
-            const response = await fetch("http://localhost:8000/tts", {
+            const response = await fetch(`${API_BASE_URL}/tts`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ text: message.content })

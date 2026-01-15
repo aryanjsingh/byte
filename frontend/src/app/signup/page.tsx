@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { API_BASE_URL } from '@/lib/constants';
 
 export default function SignupPage() {
     const [name, setName] = useState('');
@@ -27,7 +28,7 @@ export default function SignupPage() {
         setIsLoading(true);
 
         try {
-            const res = await fetch('http://localhost:8000/auth/signup', {
+            const res = await fetch(`${API_BASE_URL}/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password, name }),
@@ -57,10 +58,10 @@ export default function SignupPage() {
         <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 py-10">
             {/* Animated Background */}
             <div className="animated-bg" />
-            
+
             {/* Floating Orbs */}
             <motion.div
-                animate={{ 
+                animate={{
                     y: [0, -40, 0],
                     x: [0, 30, 0],
                     scale: [1, 1.15, 1]
@@ -69,7 +70,7 @@ export default function SignupPage() {
                 className="absolute top-1/3 left-1/5 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl"
             />
             <motion.div
-                animate={{ 
+                animate={{
                     y: [0, 30, 0],
                     x: [0, -40, 0],
                     scale: [1, 1.2, 1]
@@ -78,7 +79,7 @@ export default function SignupPage() {
                 className="absolute bottom-1/3 right-1/5 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl"
             />
             <motion.div
-                animate={{ 
+                animate={{
                     y: [0, -20, 0],
                     scale: [1, 1.1, 1]
                 }}
@@ -141,13 +142,11 @@ export default function SignupPage() {
                                 <label className="block text-sm font-medium text-white/70 mb-2" htmlFor={field.id}>
                                     {field.label}
                                 </label>
-                                <div className={`relative rounded-xl transition-all duration-300 ${
-                                    focusedField === field.id ? 'ring-2 ring-purple-500/50' : ''
-                                }`}>
+                                <div className={`relative rounded-xl transition-all duration-300 ${focusedField === field.id ? 'ring-2 ring-purple-500/50' : ''
+                                    }`}>
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <span className={`material-symbols-outlined text-[20px] transition-colors ${
-                                            focusedField === field.id ? 'text-purple-400' : 'text-white/30'
-                                        }`}>{field.icon}</span>
+                                        <span className={`material-symbols-outlined text-[20px] transition-colors ${focusedField === field.id ? 'text-purple-400' : 'text-white/30'
+                                            }`}>{field.icon}</span>
                                     </div>
                                     <input
                                         className="block w-full pl-12 pr-4 py-3.5 rounded-xl glass-input text-white placeholder-white/30 text-sm"

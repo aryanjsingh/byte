@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { API_BASE_URL } from "@/lib/constants";
 
 interface ToxicityResult {
     toxicity: number;
@@ -40,7 +41,7 @@ export default function ToxicityCheckerPage() {
 
     const fetchHistory = async () => {
         try {
-            const res = await fetch("http://localhost:8000/tools/history/toxicity_checker?limit=10", {
+            const res = await fetch(`${API_BASE_URL}/tools/history/toxicity_checker?limit=10`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (res.ok) {
@@ -56,7 +57,7 @@ export default function ToxicityCheckerPage() {
         setResult(null);
 
         try {
-            const res = await fetch("http://localhost:8000/tools/toxicity-check", {
+            const res = await fetch(`${API_BASE_URL}/tools/toxicity-check`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -200,24 +201,22 @@ export default function ToxicityCheckerPage() {
                                                     <span className="text-sm font-medium text-white/70">{item.label}</span>
                                                 </div>
                                                 <div className="flex items-end gap-2">
-                                                    <span className={`text-2xl font-bold ${
-                                                        item.value > 0.7 ? 'text-red-400' :
-                                                        item.value > 0.5 ? 'text-orange-400' :
-                                                        item.value > 0.3 ? 'text-yellow-400' :
-                                                        'text-green-400'
-                                                    }`}>
+                                                    <span className={`text-2xl font-bold ${item.value > 0.7 ? 'text-red-400' :
+                                                            item.value > 0.5 ? 'text-orange-400' :
+                                                                item.value > 0.3 ? 'text-yellow-400' :
+                                                                    'text-green-400'
+                                                        }`}>
                                                         {Math.round(item.value * 100)}%
                                                     </span>
                                                 </div>
                                                 {/* Progress bar */}
                                                 <div className="mt-2 h-2 bg-white/10 rounded-full overflow-hidden">
                                                     <div
-                                                        className={`h-full transition-all duration-500 ${
-                                                            item.value > 0.7 ? 'bg-red-500' :
-                                                            item.value > 0.5 ? 'bg-orange-500' :
-                                                            item.value > 0.3 ? 'bg-yellow-500' :
-                                                            'bg-green-500'
-                                                        }`}
+                                                        className={`h-full transition-all duration-500 ${item.value > 0.7 ? 'bg-red-500' :
+                                                                item.value > 0.5 ? 'bg-orange-500' :
+                                                                    item.value > 0.3 ? 'bg-yellow-500' :
+                                                                        'bg-green-500'
+                                                            }`}
                                                         style={{ width: `${item.value * 100}%` }}
                                                     />
                                                 </div>
@@ -257,7 +256,7 @@ export default function ToxicityCheckerPage() {
                                                 const extraData = item.extra_data || {};
                                                 const riskLevel = extraData.risk_level || "unknown";
                                                 const maxScore = extraData.max_score || 0;
-                                                
+
                                                 return (
                                                     <div
                                                         key={item.id}

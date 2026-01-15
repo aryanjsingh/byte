@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { API_BASE_URL } from "@/lib/constants";
 
 interface ScanResult {
     content: string;
@@ -38,7 +39,7 @@ export default function FakeNewsPage() {
 
     const fetchHistory = async () => {
         try {
-            const res = await fetch("http://localhost:8000/tools/history/fake_news?limit=10", {
+            const res = await fetch(`${API_BASE_URL}/tools/history/fake_news?limit=10`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (res.ok) {
@@ -54,7 +55,7 @@ export default function FakeNewsPage() {
         setResult(null);
 
         try {
-            const res = await fetch("http://localhost:8000/tools/fake-news-check", {
+            const res = await fetch(`${API_BASE_URL}/tools/fake-news-check`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

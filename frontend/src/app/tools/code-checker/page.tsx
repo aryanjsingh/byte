@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { API_BASE_URL } from "@/lib/constants";
 
 interface Vulnerability {
     name: string;
@@ -51,7 +52,7 @@ export default function CodeCheckerPage() {
 
     const fetchHistory = async () => {
         try {
-            const res = await fetch("http://localhost:8000/tools/history/code_checker?limit=10", {
+            const res = await fetch(`${API_BASE_URL}/tools/history/code_checker?limit=10`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (res.ok) {
@@ -61,8 +62,8 @@ export default function CodeCheckerPage() {
             } else {
                 console.error("Failed to fetch history:", res.status);
             }
-        } catch (e) { 
-            console.error("History fetch error:", e); 
+        } catch (e) {
+            console.error("History fetch error:", e);
         }
     };
 
@@ -72,7 +73,7 @@ export default function CodeCheckerPage() {
         setResult(null);
 
         try {
-            const res = await fetch("http://localhost:8000/tools/code-check", {
+            const res = await fetch(`${API_BASE_URL}/tools/code-check`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -145,11 +146,10 @@ export default function CodeCheckerPage() {
                                     <button
                                         key={lang.id}
                                         onClick={() => setLanguage(lang.id)}
-                                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                                            language === lang.id
+                                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${language === lang.id
                                                 ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
                                                 : "bg-white/5 text-white/50 hover:text-white/80"
-                                        }`}
+                                            }`}
                                     >
                                         {lang.icon} {lang.name}
                                     </button>
@@ -191,12 +191,10 @@ export default function CodeCheckerPage() {
                                 <div className="glass-card rounded-2xl p-6">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-4">
-                                            <div className={`size-16 rounded-full flex items-center justify-center ${
-                                                result.total_issues === 0 ? "bg-green-500/20" : "bg-red-500/20"
-                                            }`}>
-                                                <span className={`material-symbols-outlined text-3xl ${
-                                                    result.total_issues === 0 ? "text-green-400" : "text-red-400"
+                                            <div className={`size-16 rounded-full flex items-center justify-center ${result.total_issues === 0 ? "bg-green-500/20" : "bg-red-500/20"
                                                 }`}>
+                                                <span className={`material-symbols-outlined text-3xl ${result.total_issues === 0 ? "text-green-400" : "text-red-400"
+                                                    }`}>
                                                     {result.total_issues === 0 ? "verified_user" : "gpp_bad"}
                                                 </span>
                                             </div>
@@ -279,7 +277,7 @@ export default function CodeCheckerPage() {
                                                 const extraData = item.extra_data || {};
                                                 const language = extraData.language || "unknown";
                                                 const vulnCount = extraData.vulnerabilities?.length || 0;
-                                                
+
                                                 return (
                                                     <div
                                                         key={item.id}

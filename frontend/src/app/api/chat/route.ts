@@ -1,6 +1,7 @@
 import { type UIMessage } from 'ai';
 import { NextRequest } from 'next/server';
 import WebSocket from 'ws';
+import { GET_WS_URL } from '@/lib/constants';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
         const token = authHeader.replace('Bearer ', '');
 
         // Create WebSocket connection to backend
-        const wsUrl = `ws://localhost:8000/ws/chat?token=${token}`;
+        const wsUrl = GET_WS_URL(token);
         const ws = new WebSocket(wsUrl);
 
         // Create a TransformStream to convert WebSocket messages to AI SDK format

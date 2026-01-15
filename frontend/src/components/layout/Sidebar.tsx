@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { API_BASE_URL } from '@/lib/constants';
 
 interface ChatThread {
     id: string;
@@ -28,7 +29,7 @@ export default function Sidebar() {
             const fetchThreads = async () => {
                 try {
                     const token = (session as any).accessToken;
-                    const res = await fetch('http://localhost:8000/chat/threads', {
+                    const res = await fetch(`${API_BASE_URL}/chat/threads`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
                     if (res.ok) {
@@ -156,7 +157,7 @@ export default function Sidebar() {
                                                 e.stopPropagation();
                                                 const token = (session as any)?.accessToken;
                                                 try {
-                                                    const res = await fetch(`http://localhost:8000/chat/threads/${thread.id}`, {
+                                                    const res = await fetch(`${API_BASE_URL}/chat/threads/${thread.id}`, {
                                                         method: 'DELETE',
                                                         headers: { Authorization: `Bearer ${token}` }
                                                     });
@@ -198,13 +199,11 @@ export default function Sidebar() {
                         >
                             <Link
                                 href={item.href}
-                                className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-white/5 text-white/50 hover:text-white/80 transition-all duration-300 group ${
-                                    pathname === item.href ? 'bg-white/10 text-white' : ''
-                                }`}
+                                className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-white/5 text-white/50 hover:text-white/80 transition-all duration-300 group ${pathname === item.href ? 'bg-white/10 text-white' : ''
+                                    }`}
                             >
-                                <span className={`material-symbols-outlined text-[18px] group-hover:text-blue-400 transition-colors ${
-                                    pathname === item.href ? 'text-blue-400' : ''
-                                }`}>{item.icon}</span>
+                                <span className={`material-symbols-outlined text-[18px] group-hover:text-blue-400 transition-colors ${pathname === item.href ? 'text-blue-400' : ''
+                                    }`}>{item.icon}</span>
                                 <span className="text-sm font-medium">{item.label}</span>
                             </Link>
                         </motion.div>

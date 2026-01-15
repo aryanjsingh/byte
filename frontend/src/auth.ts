@@ -1,5 +1,6 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
+import { API_BASE_URL } from "./lib/constants"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
     providers: [
@@ -11,7 +12,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             authorize: async (credentials) => {
                 try {
                     // Logic to request our FastAPI backend
-                    const res = await fetch("http://localhost:8000/auth/login", {
+                    const res = await fetch(`${API_BASE_URL}/auth/login`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
@@ -26,23 +27,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
                     const tokenData = await res.json();
                     // tokenData contains { access_token, token_type }
-                    
+
                     if (tokenData && tokenData.access_token) {
                         // Fetch user details including name
-                        const meRes = await fetch("http://localhost:8000/auth/me", {
+                        const meRes = await fetch(`${API_BASE_URL}/auth/me`, {
                             headers: { "Authorization": `Bearer ${tokenData.access_token}` }
                         });
-                        
+
                         let userName = "User";
                         if (meRes.ok) {
                             const userData = await meRes.json();
                             userName = userData.name || "User";
                         }
-                        
-                        return { 
-                            email: credentials.email as string, 
+
+                        return {
+                            email: credentials.email as string,
                             name: userName,
-                            accessToken: tokenData.access_token 
+                            accessToken: tokenData.access_token
                         } as any;
                     }
                     return null;

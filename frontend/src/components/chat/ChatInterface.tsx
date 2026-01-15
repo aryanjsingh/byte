@@ -7,6 +7,7 @@ import InputArea from '@/components/chat/InputArea';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { API_BASE_URL, GET_WS_URL } from '@/lib/constants';
 
 interface ToolCallInfo {
     id: string;
@@ -95,7 +96,7 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
             let reconnectTimeout: NodeJS.Timeout | null = null;
 
             const connectWebSocket = () => {
-                const websocket = new WebSocket(`ws://localhost:8000/ws/chat?token=${token}`);
+                const websocket = new WebSocket(GET_WS_URL(token));
 
                 websocket.onopen = () => {
                     console.log('✅ WebSocket connected');
@@ -288,7 +289,7 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
             if (status === 'authenticated' && session?.user) {
                 try {
                     const token = (session as any).accessToken;
-                    const response = await fetch(`http://localhost:8000/chat/threads/${threadId}`, {
+                    const response = await fetch(`${API_BASE_URL}/chat/threads/${threadId}`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
 
@@ -423,7 +424,7 @@ export default function ChatInterface({ threadId }: ChatInterfaceProps) {
             formData.append('thread_id', currentThreadId || 'new');
             formData.append('mode', mode);
 
-            const response = await fetch('http://localhost:8000/chat/voice', {
+            const response = await fetch(`${API_BASE_URL}/chat/voice`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData,

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { API_BASE_URL } from "@/lib/constants";
 
 interface ScanResult {
     target: string;
@@ -44,7 +45,7 @@ export default function URLCheckerPage() {
 
     const fetchHistory = async () => {
         try {
-            const res = await fetch("http://localhost:8000/tools/history/url_checker?limit=10", {
+            const res = await fetch(`${API_BASE_URL}/tools/history/url_checker?limit=10`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (res.ok) {
@@ -60,7 +61,7 @@ export default function URLCheckerPage() {
         setResult(null);
 
         try {
-            const res = await fetch("http://localhost:8000/tools/url-check", {
+            const res = await fetch(`${API_BASE_URL}/tools/url-check`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
